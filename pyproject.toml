@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "iliterate"
+version = "0.1.0"
+description = "Unobstrusive literate programming experience for Python pragmatists"
+authors = ["Alejandro Piad <alepiad@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.4.1"
+mkdocs = "^1.1"
+coverage = "^5.0.3"
+black = "^19.10b0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
