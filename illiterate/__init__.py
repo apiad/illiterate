@@ -22,12 +22,17 @@ If you don't, then we have done a pretty bad job.
 # the most important definitions (clases and methods) at the top, and leave
 # implementation details for the end. 
 
-# I know some will complain, and say "but am I forced to organize my code in a specific way!?".
-# Well, there is no real restriction to organizing the in Python other than for scoping rules,
+# I know some will complain, and say "but why am I forced to organize my code in a specific way!?".
+# Well, there is no real restriction to organizing code in Python other than for scoping rules,
 # i.e., that any symbol you use is already defined before. Other than that, you either don't care
 # how the code is organized, in which case it is better to have some guidelines, or you do
 # care how your code is organized. In this second case, if the way your code is organized is not already
-# optimized for readibility, then my opinion is that you're doing it wrong. Plain and simple.
+# optimized for readibility, then my opinion is that you're organizing it wrong. Plain and simple.
+
+# With illiterate, you always organize your code in the way that best fits the explanation.
+# And when you are required to import something or define something at some point, then you better
+# have a good excuse for including it there. If you're doing it right, you should have already
+# explained your whys and you should be fairly justified at that point.
 
 # To get in the right mindset for this paradigm shift, think of your source in the following terms.
 # You are a narrator talking to yourself (the future you), trying to explain how this code works.
@@ -66,7 +71,7 @@ If you don't, then we have done a pretty bad job.
 # And then you just add the code as always. Illiterate Python files are just regular Python files,
 # so everything should work the same as before.
 
-# ## The implementation
+# ## High-level implementation
 
 # Illiterate is a very simple program. All it does is parse Python files, which are converted to some
 # intermediate representation, and then writes them back in Markdown. However, this "parsing" is very simple,
@@ -79,6 +84,8 @@ If you don't, then we have done a pretty bad job.
 
 # Starting at root folder, we will process all the `.py` files in sequence, producing for each one
 # a markdown file that will be saved to the output folder.
+
+# ### The outer loop
 
 # In the output, filenames will match the folder structure that we find, only changing the 
 # `.py` with an `.md` extension and every "/" with a dot.
@@ -115,19 +122,46 @@ def process(src_folder: Path, output_folder: Path):
     # Each input file can be found recursively with `.rglob`,
     # which works pretty much like `ls -lR`.
     for input_path in tqdm.tqdm(src_folder.rglob("*.py"), unit="file"):
-        # The output path is the same as the input path 
-        # (together with folder structure) but with the right extension.
+        # The output path matches the input path but with the right extension,
+        # using "." as separator, and rooted at `output_path`
         output_path = output_folder / ".".join(input_path.with_suffix(".md").parts)
         # And just process that file
         process_one(input_path, output_path)
     
+# ### Processing each file
 
-# For now, we will only process and write the same content back.
+# Processing a single file is quite straightforward as well.
+# We will be using a `Parser` class that does all the heavy-lifting.
+# We fed the parser with the input and it will return an object (of type `Content`) 
+# that knows how to write itself into a file in Markdown. 
+
+from .core import Parser
 
 def process_one(input_path: Path, output_path: Path):
     # We need to create this folder hierarchy if it doesn't exists
     output_path.parent.mkdir(exist_ok=True)
 
-    # Just write the same content for now
+    # First we parse
+    with input_path.open() as fp:
+        content = Parser(fp).parse()
+
+    # And then we dump the parsed content
     with output_path.open("w") as fp:
-        fp.write(input_path.read_text())
+        content.dump(fp)
+
+# And that's it. As you can see, being forced to describe our process in this way also
+# forces us to write pretty small methods, and to organize our code in the way that is
+# easier to explain. This might seem daunting at first, but believe me (and thousands of 
+# computer scientists and software engineers that have been saying this for decades),
+# every effort that you take now to make your code more readable will be paid in the future
+# when you have to come back.
+
+# ## Where to go from here?
+
+# As you have seen, illiterate makes no assumption about the order in which your files will be read.
+# If you want to force a particular order, that goes into your `mkdocs.yml` 
+# (or wherever your documentation engine says). However, since this is Markdown, you can include
+# links anywhere you want, since only you know how your documentation engine generates links.
+
+# As an example, you can read more about the [`Parser` class](./illiterate.core.md#the-parser), 
+# or you can directy see [how the CLI works](./illiterate.cli.md).

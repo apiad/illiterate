@@ -1,0 +1,25 @@
+site_name: Illiterate
+site_url: https://apiad.net/illiterate
+repo_url: https://github.com/apiad/illiterate
+
+theme:
+    name: material
+    feature:
+        tabs: true
+    palette:
+        primary: black
+        accent: black
+
+markdown_extensions:
+    - codehilite
+    - toc:
+        permalink: true
+    - admonition
+
+nav:
+    - Home: Readme.md
+    - API: 
+        illiterate: illiterate.__init__.md
+        illiterate.core: illiterate.core.md
+        illiterate.cli: illiterate.cli.md
+        illiterate.main: illiterate.__main__.md
