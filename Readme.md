@@ -62,3 +62,35 @@ easy for anyone to dive as deep as they want. This means that users only interes
 API can easily understand how to use it, while collaborators or anyone wanting to understand how everything works
 should also be able to follow all the details.
 
+To achieve these objectives, illiterate proposes really only one major paradigm shift:
+
+> **Your code is the documentation.**
+
+That's it. You will simply write all the documentation for your code right inside your code, as comments and as Python docstrings,
+according that what is more convenient for each case. But keep this in mind, *all your code will be published as-is for documentation purposes*.
+
+Now you are forced to think about your code in terms of: "well, this will be read by users at some point, so I better make it as publishable as possible".
+This means that you can no longer simply put some throw away code in some forsaken `_tmp.py` file. That file will appear in the documentation, so it better be publishable.
+
+## How this works?
+
+The only thing that illiterate actually does is taking your Python repository and turn it into an [mkdocs](https://mkdocs.org)-ready repository.
+It will parse all your code, and output nicely formatted Markdown versions of each `.py` file. It is up to you that what is writen in those `.py` files is something worth publishing as documentation.
+
+To use it, you simply run:
+
+    python -m illiterate [src] [output]
+
+Where `[src]` is folder that is the root of your project's code (i.e., the top level folder with an `__init__.py` inside), and `[output]` is where you want the markdown files. 
+
+For example, in this project, standing on the root folder (where this Readme is located), you would run the following (🤓 yeah, it is kind if Inception-ish):
+
+    python -m illiterate illiterate docs
+
+This will take all the code in `[src]`, convert it to Markdown, and drop it inside the `[output]` folder. That's it. If you have `mkdocs`, then make sure to have your `mkdocs.yml` correctly configured so that it renders those freshly created markdowns. 
+
+You can mix illiterate with regular markdown simply by hand-crafting all the documentation you want in pure Markdown and then conveniently designing your `mkdocs.yml`.
+
+## Next steps
+
+This project is quite small, but it is a self-fulfilling prophecy. The remaining [documentation](https://apiad.github.io/illiterate/__init__) has been written with `illiterate`. Just keep reading and you'll see for yourself what does this means.
