@@ -74,7 +74,7 @@ This means that you can no longer simply put some throw away code in some forsak
 
 ## How this works?
 
-The only thing that illiterate actually does is taking your Python repository and turn it into an [mkdocs](https://mkdocs.org)-ready repository.
+The only thing that illiterate actually does is taking your Python repository and turn it into Markdown files.
 It will parse all your code, and output nicely formatted Markdown versions of each `.py` file. It is up to you that what is writen in those `.py` files is something worth publishing as documentation.
 
 To use it, you simply run:
@@ -87,7 +87,12 @@ For example, in this project, standing on the root folder (where this Readme is 
 
     python -m illiterate illiterate docs
 
-This will take all the code in `[src]`, convert it to Markdown, and drop it inside the `[output]` folder. That's it. If you have `mkdocs`, then make sure to have your `mkdocs.yml` correctly configured so that it renders those freshly created markdowns. 
+This will take all the code in `[src]`, convert it to Markdown, and drop it inside the `[output]` folder. That's it. 
+
+What you do with those Markdowns is up to you. In this project, I use [mkdocs](https://mkdocs.org) for documentation. 
+If you have `mkdocs`, then make sure to have your `mkdocs.yml` correctly configured so that it renders those freshly created markdowns. 
+You can also see the `mkdocs.yml` in this repostory to get an idea of how that configuration looks, but beware, I'm using some custom
+themes and other stuff you might or might not want.
 
 You can mix illiterate with regular markdown simply by hand-crafting all the documentation you want in pure Markdown and then conveniently designing your `mkdocs.yml`.
 

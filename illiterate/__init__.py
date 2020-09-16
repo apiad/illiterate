@@ -10,8 +10,8 @@ If you don't, then we have done a pretty bad job.
 # The basic idea is that code should be self-explanatory, but not in
 # the sense that it doesn't require comments. Rather, it should be
 # self-explanatory because comments and code together flow naturally and
-# interweave with each other in a manner that is easy to read by people 
-# beyond those who wrote it. 
+# interweave with each other in a manner that is easy to read by people
+# beyond those who wrote it.
 
 # This means that comments should be writen in prose, with correct grammar,
 # and not in short phrases next to some instructions without any context.
@@ -20,7 +20,7 @@ If you don't, then we have done a pretty bad job.
 # This also means that you are forced to organize your source code in a way
 # that allows the narrative to flow. For example, it will force you to put
 # the most important definitions (clases and methods) at the top, and leave
-# implementation details for the end. 
+# implementation details for the end.
 
 # I know some will complain, and say "but why am I forced to organize my code in a specific way!?".
 # Well, there is no real restriction to organizing code in Python other than for scoping rules,
@@ -36,8 +36,8 @@ If you don't, then we have done a pretty bad job.
 
 # To get in the right mindset for this paradigm shift, think of your source in the following terms.
 # You are a narrator talking to yourself (the future you), trying to explain how this code works.
-# Instead of the code being the important thing, is the narrative what matters. 
-# The code just happens to be inserted into some points of the narrative to actually do what the 
+# Instead of the code being the important thing, is the narrative what matters.
+# The code just happens to be inserted into some points of the narrative to actually do what the
 # narrative says.
 
 # There are many ways to explain an idea, but one of the most succesful from my point of view is
@@ -60,8 +60,8 @@ If you don't, then we have done a pretty bad job.
 # ## Writing as an illiterate
 
 # Now let's talk about using illiterate. As you have seen so far, these are just regular comments in the code.
-# That's it, nothing has changed. You just need the right mindset. 
-#
+# That's it, nothing has changed. You just need the right mindset.
+
 # Each comment will be parsed and ultimately rendered as Markdown, so you are free to include any Markdown
 # styling that you want, including lists, **bold**, `code`, and even sections (using `##`).
 # At the begining of this file you can see the docstrings. They are rendered exactly the same in the final
@@ -87,15 +87,15 @@ If you don't, then we have done a pretty bad job.
 
 # ### The outer loop
 
-# In the output, filenames will match the folder structure that we find, only changing the 
+# In the output, filenames will match the folder structure that we find, only changing the
 # `.py` with an `.md` extension and every "/" with a dot.
 # For example `src/moduleA/moduleB/file.py` will become `output/moduleA.moduleB.file.md`.
 # We will use `pathlib.Path` for that purpose.
 
 from pathlib import Path
 
-# This is our top level function that processes each file.
-# Notice how we also have docstrings in each function, as usual. 
+# Next comes our top level function that processes each file.
+# Notice how we also have docstrings in each function, as usual.
 # Docstrings are for guiding developers when inspecting our code via IntelliSense and such.
 # Hence, they should be fairly self-contained.
 
@@ -110,9 +110,12 @@ from pathlib import Path
 # comments are already enough to make everything as clear as it needs to be.
 # If a method, including comments, is longer than one screen of text, consider refactoring it.
 
-# One more thing, before I forget, is that we need fancy progress bars.
+# One more thing, before I forget, is that we want [fancy progress bars](https://tqdm.github.io/).
 
 import tqdm
+
+# And finally, as promised, here comes the function.
+
 
 def process(src_folder: Path, output_folder: Path):
     """Processes all the Python source files in `src_folder`, recursively,
@@ -127,15 +130,17 @@ def process(src_folder: Path, output_folder: Path):
         output_path = output_folder / ".".join(input_path.with_suffix(".md").parts)
         # And just process that file
         process_one(input_path, output_path)
-    
+
+
 # ### Processing each file
 
 # Processing a single file is quite straightforward as well.
 # We will be using a `Parser` class that does all the heavy-lifting.
-# We fed the parser with the input and it will return an object (of type `Content`) 
-# that knows how to write itself into a file in Markdown. 
+# We fed the parser with the input and it will return an object (of type `Content`)
+# that knows how to write itself into a file in Markdown.
 
 from .core import Parser
+
 
 def process_one(input_path: Path, output_path: Path):
     # We need to create this folder hierarchy if it doesn't exists
@@ -149,9 +154,10 @@ def process_one(input_path: Path, output_path: Path):
     with output_path.open("w") as fp:
         content.dump(fp)
 
+
 # And that's it. As you can see, being forced to describe our process in this way also
 # forces us to write pretty small methods, and to organize our code in the way that is
-# easier to explain. This might seem daunting at first, but believe me (and thousands of 
+# easier to explain. This might seem daunting at first, but believe me (and thousands of
 # computer scientists and software engineers that have been saying this for decades),
 # every effort that you take now to make your code more readable will be paid in the future
 # when you have to come back.
@@ -159,9 +165,9 @@ def process_one(input_path: Path, output_path: Path):
 # ## Where to go from here?
 
 # As you have seen, illiterate makes no assumption about the order in which your files will be read.
-# If you want to force a particular order, that goes into your `mkdocs.yml` 
+# If you want to force a particular order, that goes into your `mkdocs.yml`
 # (or wherever your documentation engine says). However, since this is Markdown, you can include
 # links anywhere you want, since only you know how your documentation engine generates links.
 
-# As an example, you can read more about the [`Parser` class](./illiterate.core.md#the-parser), 
+# As an example, you can read more about the [`Parser` class](./illiterate.core.md#the-parser),
 # or you can directy see [how the CLI works](./illiterate.cli.md).

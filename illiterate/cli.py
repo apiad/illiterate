@@ -4,22 +4,30 @@ The CLI application is basically a [Typer](https://typer.tiangolo.com) applicati
 with a single command, that launches the whole process.
 """
 
-# We need `pathlib` to resolve paths automatically
+# The illiterate CLI app is a very simple [Typer](https://typer.tiangolo.com)
+# application with a single command.
+# Typer is a CLI creation tool where you define commands as methods,
+# and it takes advantage of Python type annotations to provide argument parsing
+# and documentation.
+
+import typer
+
+# This is the main function that does all the heavy lifting.
+
+from . import process
+
+# We create a `typer` application.
+
+app = typer.Typer()
+
+# These are the types for our arguments, and `shutil` for copying files.
+
 from pathlib import Path
 from typing import List
 import shutil
 
-# And `typer` to actually create the CLI app.
-import typer
+# And here is the command implementation.
 
-# Finally, this is the main function that does all the heavy lifting.
-from . import process
-
-# We create a `typer` application.
-app = typer.Typer()
-
-
-# And here is the only command.
 
 @app.command()
 def main(src_folder: Path, output_folder: Path, copy: List[Path] = None):
@@ -30,4 +38,3 @@ def main(src_folder: Path, output_folder: Path, copy: List[Path] = None):
     if copy:
         for fname in copy:
             shutil.copy(fname, output_folder / fname.name)
- 
