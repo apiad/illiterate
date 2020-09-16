@@ -5,8 +5,13 @@ description = "Unobstrusive literate programming experience for Python pragmatis
 authors = ["Alejandro Piad <alepiad@gmail.com>"]
 license = "MIT"
 
+[tool.poetry.scripts]
+illiterate = "illiterate.cli:app"
+
 [tool.poetry.dependencies]
 python = "^3.6"
+typer = "^0.3.2"
+tqdm = "^4.49.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.4.1"
