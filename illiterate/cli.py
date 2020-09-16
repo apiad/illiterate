@@ -30,11 +30,16 @@ import shutil
 
 
 @app.command()
-def main(src_folder: Path, output_folder: Path, copy: List[Path] = None):
+def main(src_folder: Path, output_folder: Path, copy: List[str] = None):
     # Not much too see here ;)
     process(src_folder, output_folder)
 
     # Copy verbatim all necessary files
     if copy:
         for fname in copy:
-            shutil.copy(fname, output_folder / fname.name)
+            if ":" in fname:
+                fin, fout = fname.split(":")
+            else:
+                fin, fout = fname, Path(fname).name
+
+            shutil.copy(fin, output_folder / fout)

@@ -81,13 +81,15 @@ To use it, you simply run:
 
     python -m illiterate [src] [output]
 
-Where `[src]` is folder that is the root of your project's code (i.e., the top level folder with an `__init__.py` inside), and `[output]` is where you want the markdown files. 
+Where `[src]` is folder that is the root of your project's code (i.e., the top level folder with an `__init__.py` inside), and `[output]` is where you want the markdown files. You can add `--copy from:to` to copy verbatim some files into the output folder.
+I do this for copying the `Readme.md` into an `index.md` which becomes the homepage.
 
 For example, in this project, standing on the root folder (where this Readme is located), you would run the following (🤓 yeah, it is kind if Inception-ish):
 
-    python -m illiterate illiterate docs
+    python -m illiterate illiterate docs --copy Readme.md:index.md
 
-This will take all the code in `[src]`, convert it to Markdown, and drop it inside the `[output]` folder. That's it. 
+This will take all the code in `illiterate`, convert it to Markdown, and drop it inside the `docs` folder.
+It will also copy the `Readme.md` file into `docs/index.md`.
 
 What you do with those Markdowns is up to you. In this project, I use [mkdocs](https://mkdocs.org) for documentation. 
 If you have `mkdocs`, then make sure to have your `mkdocs.yml` correctly configured so that it renders those freshly created markdowns. 
