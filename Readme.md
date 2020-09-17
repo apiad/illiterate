@@ -100,4 +100,4 @@ You can mix illiterate with regular markdown simply by hand-crafting all the doc
 
 ## Next steps
 
-This project is quite small, but it is a self-fulfilling prophecy. The remaining [documentation](https://apiad.net/illiterate/illiterate) has been written with `illiterate`. Just keep reading and you'll see for yourself what does this means.
+This project is quite small, but it is a self-fulfilling prophecy. The remaining [documentation](https://apiad.net/illiterate/illiterate) has been written with `illiterate`. Just keep reading and you'll see for yourself what does this mean.
