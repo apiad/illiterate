@@ -51,7 +51,6 @@ class Block(abc.ABC):
     def print(self, fp: TextIO):
         pass
 
-
 # Markdown blocks are either formed by lines starting with `#`
 # (i.e., Python comments) or blank lines.
 # For every line that starts with `#_`, we simply remove the first two
@@ -84,6 +83,17 @@ class Python(Block):
 
         fp.write("```\n\n")
 
+# Another interesting type of content is module-level docstrings.
+# Instead of outputting these as standard Python code, we'll use a block quote.
+
+class Docstring(Block):
+    def print(self, fp:TextIO):
+        for line in self.content:
+            line = line.strip('"""')
+
+            if line:
+                fp.write(f"> {line}")
+
 # Once we have our content types correctly implemented, we will
 # define a container class that stores a sequence of possible `Block`s.
 # This will make it easier later to dump a bunch of different blocks with
@@ -106,40 +116,70 @@ class Content:
 # is very simple. Formally, we are dealing with a regular language, since
 # we can determine what type of content we are dealing with based solely on the
 # first character.
+# The parser is then a very simple automaton with three states. 
+
+import enum
+
+class State(enum.Enum):
+    Markdown = 1
+    Docstring = 2
+    Python = 3
+
+# The automaton switches states according to the first character of the current line.
 # Intuitively, as long as we are seeing either a `#` or blank lines, we are
 # seeing Markdown. Once we see a line that doesn't begin with a `#`, that
-# must be code.
-# The parser is then a very simple automaton with two states. 
+# must be code or docstring. 
+#
+# Doctrings always start with """. Once inside a docstring, until a line doesn't end
+# with """, we assume everything is part of the string.
 
 class Parser:
     def __init__(self, input_src: TextIO) -> None:
         self.input_src = input_src
+        self.content = []
+        self.state = State.Markdown
+
+    def store(self, current):
+        if not current:
+            return []
+
+        if self.state == State.Markdown:
+            self.content.append(Markdown(current))
+        elif self.state == State.Python:
+            self.content.append(Python(current))
+        elif self.state == State.Docstring:
+            self.content.append(Docstring(current))
+
+        return []
 
     def parse(self):
-        content = []
+        self.content = []
         current = []
-        state = "markdown"
 
         for line in self.input_src:
-            if line.startswith("#"):
-                if state == "python":
-                    if current:
-                        content.append(Python(current))
-                        current = []
-                    state = "markdown"
-                current.append(line)
-            else:
-                if state == "markdown":
-                    if current:
-                        content.append(Markdown(current))
-                        current = []
-                    state = "python"
-                current.append(line)
+            if self.state == State.Docstring:
+                if line.startswith('"""'):
+                    current = self.store(current)
+                    self.state = State.Markdown
 
-        if current:
-            if state == "markdown":
-                content.append(Markdown(current))
-            else:
-                content.append(Python(current))
+            elif self.state == State.Python:
+                if line.startswith("#"):
+                    current = self.store(current)
+                    self.state = State.Markdown
+                elif line.startswith('"""'):
+                    current = self.store(current)
+                    self.state = State.Docstring
 
-        return Content(*content)
+            elif self.state == State.Markdown:
+                if line.startswith('"""'):
+                    current = self.store(current)
+                    self.state = State.Docstring
+                elif not line.startswith("#"):
+                    current = self.store(current)
+                    self.state = State.Python
+
+            current.append(line)
+
+        self.store(current)
+
+        return Content(*self.content)
