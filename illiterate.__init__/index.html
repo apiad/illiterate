@@ -470,7 +470,7 @@ And then add the implementation details: <strong>how</strong> is each subtask im
   approach rather than another.</p>
 </li>
 <li>
-<p>It will make much easier for yourself to actually develop the project, I promise, because it will
+<p>It will make much easier for yourself to actually develop the project because it will
   force you to think about the problem you want to solve before thinking about the solution. And it will
   force you to write down explicitely what is that problem, what is the expected solution, which are the main
   assumptions.</p>
@@ -513,7 +513,8 @@ Hence, they should be fairly self-contained.</p>
 lend themselves very well to a coherent and flowing narrative. They are better suited to
 explain very concise ideas.
 For this reason, illiterate won't render those comments as Markdown. They are an integral part
-of your code, and will be rendered as code.</p>
+of your code, and will be rendered as code.
+If you want to render them as Markdown, you will have to explicity pass <code>--inline</code> in the CLI.</p>
 <p>Hence, you will be forced to refactor your methods so that they are as small as possible.
 That way, they will have as little comments as possible, ideally none, because the surrounding
 comments are already enough to make everything as clear as it needs to be.
@@ -524,19 +525,24 @@ If a method, including comments, is longer than one screen of text, consider ref
 
 
 <p>And finally, as promised, here comes the function.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">src_folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
+<p><a name="def:process"></a></p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">src_folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Processes all the Python source files in `src_folder`, recursively,</span>
 <span class="sd">    and writes the corresponding Markdown files to `output_folder`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+</code></pre></div>
 
-    <span class="c1"># Each input file can be found recursively with `.rglob`,</span>
-    <span class="c1"># which works pretty much like `ls -lR`.</span>
-    <span class="k">for</span> <span class="n">input_path</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="o">.</span><span class="n">tqdm</span><span class="p">(</span><span class="n">src_folder</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">&quot;*.py&quot;</span><span class="p">),</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;file&quot;</span><span class="p">):</span>
-        <span class="c1"># The output path matches the input path but with the right extension,</span>
-        <span class="c1"># using &quot;.&quot; as separator, and rooted at `output_path`</span>
-        <span class="n">output_path</span> <span class="o">=</span> <span class="n">output_folder</span> <span class="o">/</span> <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">input_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.md&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span><span class="p">)</span>
-        <span class="c1"># And just process that file</span>
-        <span class="n">process_one</span><span class="p">(</span><span class="n">input_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span>
+
+<p>Each input file can be found recursively with <code>.rglob</code>,
+which works pretty much like <code>ls -lR</code>.</p>
+<div class="codehilite"><pre><span></span><code>    <span class="k">for</span> <span class="n">input_path</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="o">.</span><span class="n">tqdm</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">src_folder</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">&quot;*.py&quot;</span><span class="p">)),</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;file&quot;</span><span class="p">):</span>
+</code></pre></div>
+
+
+<p>The output path matches the input path but with the right extension,
+using "." as separator, and rooted at <code>output_path</code>.</p>
+<div class="codehilite"><pre><span></span><code>        <span class="n">output_path</span> <span class="o">=</span> <span class="n">output_folder</span> <span class="o">/</span> <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">input_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.md&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span><span class="p">)</span>
+        <span class="n">process_one</span><span class="p">(</span><span class="n">input_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">,</span> <span class="n">inline</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -545,19 +551,27 @@ If a method, including comments, is longer than one screen of text, consider ref
 We will be using a <code>Parser</code> class that does all the heavy-lifting.
 We fed the parser with the input and it will return an object (of type <code>Content</code>)
 that knows how to write itself into a file in Markdown.</p>
+<p><a name="def:process_one"></a></p>
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">.core</span> <span class="kn">import</span> <span class="n">Parser</span>
 
 
-<span class="k">def</span> <span class="nf">process_one</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
-    <span class="c1"># We need to create this folder hierarchy if it doesn&#39;t exists</span>
-    <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">process_one</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span><span class="nb">bool</span><span class="p">):</span>
+</code></pre></div>
 
-    <span class="c1"># First we parse</span>
-    <span class="k">with</span> <span class="n">input_path</span><span class="o">.</span><span class="n">open</span><span class="p">()</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-        <span class="n">content</span> <span class="o">=</span> <span class="n">Parser</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
 
-    <span class="c1"># And then we dump the parsed content</span>
-    <span class="k">with</span> <span class="n">output_path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+<p>We need to create this folder hierarchy if it doesn't exists:</p>
+<div class="codehilite"><pre><span></span><code>    <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+
+<p>First we parse:</p>
+<div class="codehilite"><pre><span></span><code>    <span class="k">with</span> <span class="n">input_path</span><span class="o">.</span><span class="n">open</span><span class="p">()</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="n">Parser</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="n">inline</span><span class="p">)</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+</code></pre></div>
+
+
+<p>And then we dump the parsed content:</p>
+<div class="codehilite"><pre><span></span><code>    <span class="k">with</span> <span class="n">output_path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
         <span class="n">content</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span>
 </code></pre></div>
 
@@ -573,7 +587,10 @@ when you have to come back.</p>
 If you want to force a particular order, that goes into your <code>mkdocs.yml</code>
 (or wherever your documentation engine says). However, since this is Markdown, you can include
 links anywhere you want, since only you know how your documentation engine generates links.</p>
-<p>As an example, you can read more about the <a href="../illiterate.core/#the-parser"><code>Parser</code> class</a>,
+<p>Illiterate automatically generates anchors for top-level definitions of classes and methods, in
+the form <code>#class:ClassName</code> or <code>#def:method_name</code>.
+As an example, you can read more about the <a href="../illiterate.core/#class:Parser"><code>Parser</code></a>
+(which is an auto-generated link)
 or you can directy see <a href="../illiterate.cli/">how the CLI works</a>.</p>
                 
               
