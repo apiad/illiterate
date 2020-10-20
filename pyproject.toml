@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "illiterate"
-version = "0.3.0"
-description = "Unobstrusive literate programming experience for Python pragmatists"
+version = "0.3.1"
+description = "Unobtrusive literate programming experience for Python pragmatists"
 authors = ["Alejandro Piad <alepiad@gmail.com>"]
 license = "MIT"
+readme = "Readme.md"
 
 [tool.poetry.scripts]
 illiterate = "illiterate.cli:app"
