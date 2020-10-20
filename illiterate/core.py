@@ -125,6 +125,12 @@ class State(enum.Enum):
     Docstring = 2
     Python = 3
 
+class Parser:
+    def __init__(self, input_src: TextIO) -> None:
+        self.input_src = input_src
+        self.content = []
+        self.state = State.Markdown
+
 # The automaton switches states according to the first character of the current line.
 # Intuitively, as long as we are seeing either a `#` or blank lines, we are
 # seeing Markdown. Once we see a line that doesn't begin with a `#`, that
@@ -132,25 +138,6 @@ class State(enum.Enum):
 #
 # Doctrings always start with """. Once inside a docstring, until a line doesn't end
 # with """, we assume everything is part of the string.
-
-class Parser:
-    def __init__(self, input_src: TextIO) -> None:
-        self.input_src = input_src
-        self.content = []
-        self.state = State.Markdown
-
-    def store(self, current):
-        if not current:
-            return []
-
-        if self.state == State.Markdown:
-            self.content.append(Markdown(current))
-        elif self.state == State.Python:
-            self.content.append(Python(current))
-        elif self.state == State.Docstring:
-            self.content.append(Docstring(current))
-
-        return []
 
     def parse(self):
         self.content = []
@@ -183,3 +170,22 @@ class Parser:
         self.store(current)
 
         return Content(*self.content)
+
+# This small utility function creates the actual `Block` instance.
+# We make return an empty list so that we can use it as shown before,
+# by calling it and restoring `current = []` in the same line. 
+
+    def store(self, current):
+        if not current:
+            return []
+
+        if self.state == State.Markdown:
+            self.content.append(Markdown(current))
+        elif self.state == State.Python:
+            self.content.append(Python(current))
+        elif self.state == State.Docstring:
+            self.content.append(Docstring(current))
+
+        return []
+
+# And this is it.
