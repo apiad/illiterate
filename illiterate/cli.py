@@ -25,16 +25,28 @@ app = typer.Typer()
 from pathlib import Path
 from typing import List
 import shutil
+import logging
 
 # And here is the command implementation.
 
 
 @app.command()
-def main(src_folder: Path, output_folder: Path, copy: List[str] = None):
-    # Not much too see here ;)
-    process(src_folder, output_folder)
+def main(
+    src_folder: Path,
+    output_folder: Path,
+    copy: List[str] = None,
+    debug: bool = False,
+    inline: bool = False,
+):
+    if debug:
+        logging.basicConfig(level="DEBUG")
+    else:
+        logging.basicConfig(level="WARNING")
 
-    # Copy verbatim all necessary files
+    # This function does all the heavy-lifting...
+    process(src_folder, output_folder, inline)
+
+    # Finally, we just have to copy verbatim all necessary files.
     if copy:
         for fname in copy:
             if ":" in fname:

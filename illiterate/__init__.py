@@ -52,7 +52,7 @@ If you don't, then we have done a pretty bad job.
 #   now not only the implementation details are there, but also all the motivation behind choosing some
 #   approach rather than another.
 
-# - It will make much easier for yourself to actually develop the project, I promise, because it will
+# - It will make much easier for yourself to actually develop the project because it will
 #   force you to think about the problem you want to solve before thinking about the solution. And it will
 #   force you to write down explicitely what is that problem, what is the expected solution, which are the main
 #   assumptions.
@@ -104,6 +104,7 @@ from pathlib import Path
 # explain very concise ideas.
 # For this reason, illiterate won't render those comments as Markdown. They are an integral part
 # of your code, and will be rendered as code.
+# If you want to render them as Markdown, you will have to explicity pass `--inline` in the CLI.
 
 # Hence, you will be forced to refactor your methods so that they are as small as possible.
 # That way, they will have as little comments as possible, ideally none, because the surrounding
@@ -117,19 +118,18 @@ import tqdm
 # And finally, as promised, here comes the function.
 
 
-def process(src_folder: Path, output_folder: Path):
+def process(src_folder: Path, output_folder: Path, inline: bool):
     """Processes all the Python source files in `src_folder`, recursively,
     and writes the corresponding Markdown files to `output_folder`.
     """
 
     # Each input file can be found recursively with `.rglob`,
     # which works pretty much like `ls -lR`.
-    for input_path in tqdm.tqdm(src_folder.rglob("*.py"), unit="file"):
+    for input_path in tqdm.tqdm(list(src_folder.rglob("*.py")), unit="file"):
         # The output path matches the input path but with the right extension,
-        # using "." as separator, and rooted at `output_path`
+        # using "." as separator, and rooted at `output_path`.
         output_path = output_folder / ".".join(input_path.with_suffix(".md").parts)
-        # And just process that file
-        process_one(input_path, output_path)
+        process_one(input_path, output_path, inline)
 
 
 # ### Processing each file
@@ -142,15 +142,15 @@ def process(src_folder: Path, output_folder: Path):
 from .core import Parser
 
 
-def process_one(input_path: Path, output_path: Path):
-    # We need to create this folder hierarchy if it doesn't exists
+def process_one(input_path: Path, output_path: Path, inline:bool):
+    # We need to create this folder hierarchy if it doesn't exists:
     output_path.parent.mkdir(exist_ok=True)
 
-    # First we parse
+    # First we parse:
     with input_path.open() as fp:
-        content = Parser(fp).parse()
+        content = Parser(fp, inline=inline).parse()
 
-    # And then we dump the parsed content
+    # And then we dump the parsed content:
     with output_path.open("w") as fp:
         content.dump(fp)
 
@@ -169,5 +169,8 @@ def process_one(input_path: Path, output_path: Path):
 # (or wherever your documentation engine says). However, since this is Markdown, you can include
 # links anywhere you want, since only you know how your documentation engine generates links.
 
-# As an example, you can read more about the [`Parser` class](./illiterate.core.md#the-parser),
+# Illiterate automatically generates anchors for top-level definitions of classes and methods, in
+# the form `#class:ClassName` or `#def:method_name`.
+# As an example, you can read more about the [`Parser`](./illiterate.core.md#class:Parser)
+# (which is an auto-generated link)
 # or you can directy see [how the CLI works](./illiterate.cli.md).
