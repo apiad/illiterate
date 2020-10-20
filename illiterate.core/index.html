@@ -493,6 +493,12 @@ The parser is then a very simple automaton with three states. </p>
     <span class="n">Markdown</span> <span class="o">=</span> <span class="mi">1</span>
     <span class="n">Docstring</span> <span class="o">=</span> <span class="mi">2</span>
     <span class="n">Python</span> <span class="o">=</span> <span class="mi">3</span>
+
+<span class="k">class</span> <span class="nc">Parser</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_src</span><span class="p">:</span> <span class="n">TextIO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_src</span> <span class="o">=</span> <span class="n">input_src</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">State</span><span class="o">.</span><span class="n">Markdown</span>
 </code></pre></div>
 
 
@@ -502,26 +508,7 @@ seeing Markdown. Once we see a line that doesn't begin with a <code>#</code>, th
 must be code or docstring. </p>
 <p>Doctrings always start with """. Once inside a docstring, until a line doesn't end
 with """, we assume everything is part of the string.</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Parser</span><span class="p">:</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_src</span><span class="p">:</span> <span class="n">TextIO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">input_src</span> <span class="o">=</span> <span class="n">input_src</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">State</span><span class="o">.</span><span class="n">Markdown</span>
-
-    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">[]</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="n">State</span><span class="o">.</span><span class="n">Markdown</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Markdown</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="n">State</span><span class="o">.</span><span class="n">Python</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Python</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="n">State</span><span class="o">.</span><span class="n">Docstring</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Docstring</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
-
-        <span class="k">return</span> <span class="p">[]</span>
-
-    <span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="codehilite"><pre><span></span><code>    <span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">current</span> <span class="o">=</span> <span class="p">[]</span>
 
@@ -553,6 +540,27 @@ with """, we assume everything is part of the string.</p>
 
         <span class="k">return</span> <span class="n">Content</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
 </code></pre></div>
+
+
+<p>This small utility function creates the actual <code>Block</code> instance.
+We make return an empty list so that we can use it as shown before,
+by calling it and restoring <code>current = []</code> in the same line. </p>
+<div class="codehilite"><pre><span></span><code>    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="n">State</span><span class="o">.</span><span class="n">Markdown</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Markdown</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="n">State</span><span class="o">.</span><span class="n">Python</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Python</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="n">State</span><span class="o">.</span><span class="n">Docstring</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Docstring</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="p">[]</span>
+</code></pre></div>
+
+
+<p>And this is it.</p>
                 
               
               
