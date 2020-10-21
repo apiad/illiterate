@@ -555,7 +555,7 @@ that knows how to write itself into a file in Markdown.</p>
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">.core</span> <span class="kn">import</span> <span class="n">Parser</span>
 
 
-<span class="k">def</span> <span class="nf">process_one</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span><span class="nb">bool</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">process_one</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
 </code></pre></div>
 
 
@@ -564,13 +564,15 @@ that knows how to write itself into a file in Markdown.</p>
 </code></pre></div>
 
 
-<p>First we parse:</p>
+<p>First we parse, passing also the computed name for the module (without .md).</p>
 <div class="codehilite"><pre><span></span><code>    <span class="k">with</span> <span class="n">input_path</span><span class="o">.</span><span class="n">open</span><span class="p">()</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-        <span class="n">content</span> <span class="o">=</span> <span class="n">Parser</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="n">inline</span><span class="p">)</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="n">Parser</span><span class="p">(</span>
+            <span class="n">fp</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="n">inline</span><span class="p">,</span> <span class="n">module_name</span><span class="o">=</span><span class="n">output_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
 </code></pre></div>
 
 
-<p>And then we dump the parsed content:</p>
+<p>And then we dump the parsed content.</p>
 <div class="codehilite"><pre><span></span><code>    <span class="k">with</span> <span class="n">output_path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
         <span class="n">content</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span>
 </code></pre></div>
