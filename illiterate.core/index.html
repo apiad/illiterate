@@ -379,9 +379,9 @@ inside a Python file and perform the necessary conversions.</p>
 
 
 <p>To represent the different types of content in a single Python file,
-we will use two classes.
-These classes will represent, respectively, a block of Python code
-and a block of Markdown code.</p>
+we will use three classes.
+These classes will represent, respectively, a block of <a href="../illiterate.core/#ref:Markdown">Markdown</a> text,
+a block of <a href="../illiterate.core/#ref:Python">Python</a> code, and a top-level <a href="../illiterate.core/#ref:Docstring">docstring</a>.</p>
 <p>The only difference between these two types of content that we care of
 is how they are printed as Markdown.
 Other than that, both types of content are simply a list of text lines.</p>
@@ -394,6 +394,7 @@ Hence, we will remove all the empty lines at the begining and the end
 of each block.</p>
 <p>The common functionality will go into an abstract class.</p>
 <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">abc</span>
+<span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">TextIO</span><span class="p">,</span> <span class="n">List</span>
 </code></pre></div>
 
@@ -401,7 +402,7 @@ of each block.</p>
 <h2 id="content-blocks">Content Blocks<a class="headerlink" href="#content-blocks" title="Permanent link">&para;</a></h2>
 <p>The only relevant functionality in this class is cleaning up
 the list of content.</p>
-<p><a name="class:Block"></a></p>
+<p><a name="ref:Block"></a></p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Block</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">module_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">module_name</span> <span class="o">=</span> <span class="n">module_name</span>
@@ -422,7 +423,7 @@ the list of content.</p>
 </code></pre></div>
 
 
-<p>We also define abstract method <code>print</code> which inheritors
+<p>We also define an abstract method <code>print</code> which inheritors
 will override to determine how different types of content are printed.</p>
 <div class="codehilite"><pre><span></span><code>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
     <span class="k">def</span> <span class="nf">print</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fp</span><span class="p">:</span> <span class="n">TextIO</span><span class="p">):</span>
@@ -435,11 +436,15 @@ will override to determine how different types of content are printed.</p>
 For every line that starts with <code>#_</code>, we simply remove the first two
 characters, i.e., the sharp symbol and the starting space.
 For blank lines, we just output them as-is.</p>
-<p><a name="class:Markdown"></a></p>
+<p>The only slightly complex functionality in Markdown blocks is formatting
+references. We want to write something <code>ref:illiterate.core:Markdown</code>
+in our documentation, and have it translated automatically to
+<code>../illiterate.core#ref:Markdown</code>.</p>
+<p><a name="ref:Markdown"></a></p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Markdown</span><span class="p">(</span><span class="n">Block</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">print</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fp</span><span class="p">:</span> <span class="n">TextIO</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
-            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fix_links</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
 
             <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;# &quot;</span><span class="p">):</span>
                 <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -447,6 +452,16 @@ For blank lines, we just output them as-is.</p>
                 <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+<p>Fixing the links is very easy if we use a regular expression.
+Notice that we let the last part (the class or method name) as optional.
+This means we can link to modules directly with <code>ref:module</code>.</p>
+<div class="codehilite"><pre><span></span><code>    <span class="n">links_re</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\(ref:(?P&lt;module&gt;[a-zA-Z_\.]+)(:(?P&lt;name&gt;[a-zA-Z_\.]+))?\)&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fix_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">links_re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(../\g&lt;module&gt;/#ref:\g&lt;name&gt;)&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -459,11 +474,8 @@ in this block and output some invisible HTML anchors.
 These anchors won't render in the Markdown or the table of content but you
 can use them to link to method.
 For example, see the <a href="#class:Parser"><code>Parser</code></a> class defined below.</p>
-<p><a name="class:Python"></a></p>
-<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">re</span>
-
-
-<span class="k">class</span> <span class="nc">Python</span><span class="p">(</span><span class="n">Block</span><span class="p">):</span>
+<p><a name="ref:Python"></a></p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Python</span><span class="p">(</span><span class="n">Block</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">print</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fp</span><span class="p">:</span> <span class="n">TextIO</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
             <span class="k">return</span>
@@ -487,7 +499,7 @@ To extend this to second-level definitions and beyond, we're gonna have to intro
 sort of stack to keep track of the outer definitions, because a class name can be defined
 in a different Python block than its inner methods.</p>
 </div>
-<div class="codehilite"><pre><span></span><code>    <span class="n">anchor_re</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(?P&lt;type&gt;(class|def))\s(?P&lt;name&gt;[a-zA-Z0-9_]+).*:&quot;</span><span class="p">)</span>
+<div class="codehilite"><pre><span></span><code>    <span class="n">anchor_re</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(?P&lt;type&gt;(class|def))\s(?P&lt;name&gt;[a-zA-Z0-9_]+)&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_anchors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">anchors</span> <span class="o">=</span> <span class="p">[]</span>
@@ -496,9 +508,7 @@ in a different Python block than its inner methods.</p>
             <span class="n">match</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">anchor_re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
-                <span class="n">anchors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;&lt;a name=</span><span class="se">\&quot;</span><span class="si">{</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">&gt;&lt;/a&gt;&quot;</span>
-                <span class="p">)</span>
+                <span class="n">anchors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&lt;a name=</span><span class="se">\&quot;</span><span class="s2">ref:</span><span class="si">{</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">&gt;&lt;/a&gt;&quot;</span><span class="p">)</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Found anchor: </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">match</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">anchors</span>
@@ -507,7 +517,7 @@ in a different Python block than its inner methods.</p>
 
 <p>Another interesting type of content is module-level docstrings.
 Instead of outputting these as standard Python code, we'll use a block quote.</p>
-<p><a name="class:Docstring"></a></p>
+<p><a name="ref:Docstring"></a></p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Docstring</span><span class="p">(</span><span class="n">Block</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">print</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fp</span><span class="p">:</span> <span class="n">TextIO</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
@@ -522,7 +532,7 @@ Instead of outputting these as standard Python code, we'll use a block quote.</p
 define a container class that stores a sequence of possible <code>Block</code>s.
 This will make it easier later to dump a bunch of different blocks with
 a single instruction.</p>
-<p><a name="class:Content"></a></p>
+<p><a name="ref:Content"></a></p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Content</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">content</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Block</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">content</span>
@@ -541,7 +551,7 @@ The parser is then a very simple automaton with three states.</p>
 is very simple. Formally, we are dealing with a regular language, since
 we can determine what type of content we are dealing with based solely on the
 first character.</p>
-<p><a name="class:Parser"></a></p>
+<p><a name="ref:Parser"></a></p>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">Parser</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_src</span><span class="p">:</span> <span class="n">TextIO</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">module_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">input_src</span> <span class="o">=</span> <span class="n">input_src</span>
@@ -549,8 +559,6 @@ first character.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">module_name</span> <span class="o">=</span> <span class="n">module_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">State</span><span class="o">.</span><span class="n">Markdown</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="n">module_name</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -622,8 +630,8 @@ by calling it and restoring <code>current = []</code> in the same line.</p>
 </code></pre></div>
 
 
-<p>Finally, here are out states.</p>
-<p><a name="class:State"></a></p>
+<p>Finally, here are the states.</p>
+<p><a name="ref:State"></a></p>
 <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">enum</span>
 
 
@@ -634,7 +642,7 @@ by calling it and restoring <code>current = []</code> in the same line.</p>
 </code></pre></div>
 
 
-<p>And this is it.</p>
+<p>And this is it 🖖.</p>
                 
               
               
