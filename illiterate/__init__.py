@@ -111,9 +111,9 @@ from pathlib import Path
 # comments are already enough to make everything as clear as it needs to be.
 # If a method, including comments, is longer than one screen of text, consider refactoring it.
 
-# One more thing, before I forget, is that we want [fancy progress bars](https://tqdm.github.io/).
+# One more thing, before I forget, is that we want [fancy progress bars](https://rich.readthedocs.io/).
 
-import tqdm
+from rich.progress import track
 
 # And finally, as promised, here comes the function.
 
@@ -125,7 +125,7 @@ def process(src_folder: Path, output_folder: Path, inline: bool):
 
     # Each input file can be found recursively with `.rglob`,
     # which works pretty much like `ls -lR`.
-    for input_path in tqdm.tqdm(list(src_folder.rglob("*.py")), unit="file"):
+    for input_path in track(list(src_folder.rglob("*.py")), description="Processing"):
         # The output path matches the input path but with the right extension,
         # using "." as separator, and rooted at `output_path`.
         output_path = output_folder / ".".join(input_path.with_suffix(".md").parts)
@@ -135,22 +135,24 @@ def process(src_folder: Path, output_folder: Path, inline: bool):
 # ### Processing each file
 
 # Processing a single file is quite straightforward as well.
-# We will be using a `Parser` class that does all the heavy-lifting.
-# We fed the parser with the input and it will return an object (of type `Content`)
+# We will be using a [`Parser`](ref:illiterate.core:Parser) class that does all the heavy-lifting.
+# We feed the parser with the input and it will return an object (of type [`Content`](ref:illiterate.core:Content))
 # that knows how to write itself into a file in Markdown.
 
 from .core import Parser
 
 
-def process_one(input_path: Path, output_path: Path, inline:bool):
+def process_one(input_path: Path, output_path: Path, inline: bool):
     # We need to create this folder hierarchy if it doesn't exists:
     output_path.parent.mkdir(exist_ok=True)
 
-    # First we parse:
+    # First we parse, passing also the computed name for the module (without .md).
     with input_path.open() as fp:
-        content = Parser(fp, inline=inline).parse()
+        content = Parser(
+            fp, inline=inline, module_name=output_path.with_suffix("").name
+        ).parse()
 
-    # And then we dump the parsed content:
+    # And then we dump the parsed content.
     with output_path.open("w") as fp:
         content.dump(fp)
 
@@ -170,7 +172,7 @@ def process_one(input_path: Path, output_path: Path, inline:bool):
 # links anywhere you want, since only you know how your documentation engine generates links.
 
 # Illiterate automatically generates anchors for top-level definitions of classes and methods, in
-# the form `#class:ClassName` or `#def:method_name`.
-# As an example, you can read more about the [`Parser`](./illiterate.core.md#class:Parser)
+# the form `ref:module:ClassName` or `ref:module:method_name`.
+# As an example, you can read more about the [`Parser`](ref:illiterate.core:Parser)
 # (which is an auto-generated link)
-# or you can directy see [how the CLI works](./illiterate.cli.md).
+# or you can directy see [how the CLI works](ref:illiterate.cli).

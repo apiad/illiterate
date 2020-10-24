@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "illiterate"
-version = "0.4.0"
+version = "0.4.1"
 description = "Unobtrusive literate programming experience for Python pragmatists"
 authors = ["Alejandro Piad <alepiad@gmail.com>"]
 license = "MIT"
@@ -12,7 +12,7 @@ illiterate = "illiterate.cli:app"
 [tool.poetry.dependencies]
 python = "^3.6"
 typer = "^0.3.2"
-tqdm = "^4.49.0"
+rich = "^9.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.4.1"

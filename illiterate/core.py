@@ -7,9 +7,9 @@ import logging
 logger = logging.getLogger("illiterate")
 
 # To represent the different types of content in a single Python file,
-# we will use two classes.
-# These classes will represent, respectively, a block of Python code
-# and a block of Markdown code.
+# we will use three classes.
+# These classes will represent, respectively, a block of [Markdown](ref:illiterate.core:Markdown) text,
+# a block of [Python](ref:illiterate.core:Python) code, and a top-level [docstring](ref:illiterate.core:Docstring).
 
 # The only difference between these two types of content that we care of
 # is how they are printed as Markdown.
@@ -26,6 +26,7 @@ logger = logging.getLogger("illiterate")
 # The common functionality will go into an abstract class.
 
 import abc
+import re
 from typing import Iterable, TextIO, List
 
 # ## Content Blocks
@@ -34,9 +35,10 @@ from typing import Iterable, TextIO, List
 # the list of content.
 
 
-
 class Block(abc.ABC):
-    def __init__(self, content: List[str]):
+    def __init__(self, content: List[str], module_name: str):
+        self.module_name = module_name
+
         while content:
             if not content[0].strip():  # testing for emptyness
                 content.pop(0)  # from the top down
@@ -51,7 +53,7 @@ class Block(abc.ABC):
 
         self.content = content
 
-    # We also define abstract method `print` which inheritors
+    # We also define an abstract method `print` which inheritors
     # will override to determine how different types of content are printed.
 
     @abc.abstractmethod
@@ -65,11 +67,16 @@ class Block(abc.ABC):
 # characters, i.e., the sharp symbol and the starting space.
 # For blank lines, we just output them as-is.
 
+# The only slightly complex functionality in Markdown blocks is formatting
+# references. We want to write something `ref:illiterate.core:Markdown`
+# in our documentation, and have it translated automatically to
+# `../illiterate.core#ref:Markdown`.
+
 
 class Markdown(Block):
     def print(self, fp: TextIO):
         for line in self.content:
-            line = line.strip()
+            line = self.fix_links(line.strip())
 
             if line.startswith("# "):
                 fp.write(line[2:] + "\n")
@@ -77,6 +84,15 @@ class Markdown(Block):
                 fp.write("\n")
 
         fp.write("\n")
+
+    # Fixing the links is very easy if we use a regular expression.
+    # Notice that we let the last part (the class or method name) as optional.
+    # This means we can link to modules directly with `ref:module`.
+
+    links_re = re.compile(r"\(ref:(?P<module>[a-zA-Z_\.]+)(:(?P<name>[a-zA-Z_\.]+))?\)")
+
+    def fix_links(self, line):
+        return self.links_re.sub(r"(../\g<module>/#ref:\g<name>)", line)
 
 
 # Python blocks are even easier, since we will print them as-is.
@@ -89,15 +105,13 @@ class Markdown(Block):
 # can use them to link to method.
 # For example, see the [`Parser`](#class:Parser) class defined below.
 
-import re
-
 
 class Python(Block):
     def print(self, fp: TextIO):
         if not self.content:
             return
 
-        fp.write("\n".join(self._get_anchors()) + "\n\n")
+        fp.write("\n".join(self.get_anchors()) + "\n\n")
 
         fp.write("```python\n")
 
@@ -114,18 +128,16 @@ class Python(Block):
     #     sort of stack to keep track of the outer definitions, because a class name can be defined
     #     in a different Python block than its inner methods.
 
-    anchor_re = re.compile(r"(?P<type>(class|def))\s(?P<name>[a-zA-Z0-9_]+).*:")
+    anchor_re = re.compile(r"(?P<type>(class|def))\s(?P<name>[a-zA-Z0-9_]+)")
 
-    def _get_anchors(self):
+    def get_anchors(self):
         anchors = []
 
         for line in self.content:
             match: re.Match = self.anchor_re.match(line)
 
             if match:
-                anchors.append(
-                    f"<a name=\"{match.group('type')}:{match.group('name')}\"></a>"
-                )
+                anchors.append(f"<a name=\"ref:{match.group('name')}\"></a>")
                 logger.debug("Found anchor: %r" % match)
 
         return anchors
@@ -172,9 +184,10 @@ class Content:
 
 
 class Parser:
-    def __init__(self, input_src: TextIO, inline: bool) -> None:
+    def __init__(self, input_src: TextIO, inline: bool, module_name: str) -> None:
         self.input_src = input_src
         self.inline = inline
+        self.module_name = module_name
         self.content = []
         self.state = State.Markdown
 
@@ -238,16 +251,16 @@ class Parser:
             return []
 
         if self.state == State.Markdown:
-            self.content.append(Markdown(current))
+            self.content.append(Markdown(current, self.module_name))
         elif self.state == State.Python:
-            self.content.append(Python(current))
+            self.content.append(Python(current, self.module_name))
         elif self.state == State.Docstring:
-            self.content.append(Docstring(current))
+            self.content.append(Docstring(current, self.module_name))
 
         return []
 
 
-# Finally, here are out states.
+# Finally, here are the states.
 
 import enum
 
@@ -258,4 +271,4 @@ class State(enum.Enum):
     Python = 3
 
 
-# And this is it.
+# And this is it 🖖.

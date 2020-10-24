@@ -9,3 +9,7 @@ publish:
 .PHONY: docs
 docs:
 	mkdocs gh-deploy
+
+.PHONY: serve
+serve:
+	mkdocs serve

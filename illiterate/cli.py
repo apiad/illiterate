@@ -10,6 +10,7 @@ with a single command, that launches the whole process.
 # and it takes advantage of Python type annotations to provide argument parsing
 # and documentation.
 
+from logging import log
 import typer
 
 # This is the main function that does all the heavy lifting.
@@ -26,6 +27,7 @@ from pathlib import Path
 from typing import List
 import shutil
 import logging
+from rich.logging import RichHandler
 
 # And here is the command implementation.
 
@@ -38,10 +40,9 @@ def main(
     debug: bool = False,
     inline: bool = False,
 ):
-    if debug:
-        logging.basicConfig(level="DEBUG")
-    else:
-        logging.basicConfig(level="WARNING")
+    level = logging.DEBUG if debug else logging.WARNING
+
+    logging.basicConfig(level=level, handlers=[RichHandler(rich_tracebacks=True)])
 
     # This function does all the heavy-lifting...
     process(src_folder, output_folder, inline)
