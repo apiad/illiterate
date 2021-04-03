@@ -149,11 +149,13 @@ class Python(Block):
 
 class Docstring(Block):
     def print(self, fp: TextIO):
-        for line in self.content:
-            line = line.strip('"""')
+        fp.write("!!! note\n")
 
-            if line:
-                fp.write(f"> {line}")
+        for line in self.content:
+            line = line.strip()
+
+            if line != '"""':
+                fp.write(f"    {line}\n")
 
 
 # Once we have our content types correctly implemented, we will
@@ -211,7 +213,7 @@ class Parser:
 
         for line in self.input_src:
             if self.state == State.Docstring:
-                if line.startswith('"""'):
+                if line.strip().startswith('"""'):
                     current = self.store(current)
                     self.state = State.Markdown
 
@@ -221,12 +223,12 @@ class Parser:
                 ):
                     current = self.store(current)
                     self.state = State.Markdown
-                elif line.startswith('"""'):
+                elif line.strip().startswith('"""'):
                     current = self.store(current)
                     self.state = State.Docstring
 
             elif self.state == State.Markdown:
-                if line.startswith('"""'):
+                if line.strip().startswith('"""'):
                     current = self.store(current)
                     self.state = State.Docstring
                 elif not (
