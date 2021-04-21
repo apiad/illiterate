@@ -11,11 +11,11 @@ logger = logging.getLogger("illiterate")
 # These classes will represent, respectively, a block of [Markdown](ref:illiterate.core:Markdown) text,
 # a block of [Python](ref:illiterate.core:Python) code, and a top-level [docstring](ref:illiterate.core:Docstring).
 
-# The only difference between these two types of content that we care of
+# The only difference between these types of content that we care of
 # is how they are printed as Markdown.
-# Other than that, both types of content are simply a list of text lines.
+# Other than that, all types of content are simply a list of text lines.
 
-# There is however one common functionality for both.
+# There is however one common functionality for all of them.
 # Depending on how the file is structured, we might end up with
 # spurious empty lines at the begining or end of any block.
 # This might not be a big issue for Markdown, in some cases, but it is
@@ -33,6 +33,8 @@ from typing import Iterable, TextIO, List
 
 # The only relevant functionality in this class is cleaning up
 # the list of content.
+# We also define an abstract method `print` which inheritors
+# will override to determine how different types of content are printed.
 
 
 class Block(abc.ABC):
@@ -52,9 +54,6 @@ class Block(abc.ABC):
                 break
 
         self.content = content
-
-    # We also define an abstract method `print` which inheritors
-    # will override to determine how different types of content are printed.
 
     @abc.abstractmethod
     def print(self, fp: TextIO):
@@ -175,7 +174,7 @@ class Content:
 
 # ## The Parser
 
-# Finally, we have come to the core functionality of illiterate, the class
+# Finally, we have come to the core functionality of `illiterate`, the class
 # that reads Python source code and produces the corresponding blocks.
 # The parser is then a very simple automaton with three states.
 

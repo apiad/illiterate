@@ -77,6 +77,8 @@ If you don't, then we have done a pretty bad job.
 # intermediate representation, and then writes them back in Markdown. However, this "parsing" is very simple,
 # because we don't really need to understand the Python code. We just need to separate a file into blocks
 # of Markdown and blocks of Python, and then write that back.
+# There is some nuance here, to be fair, because we do want to handle some low-level annotations, like
+# references to existing types and members, but we'll get there pretty soon.
 
 # To organize this process, we will have classes that represent the different types of content,
 # and then a very simple parser that scans a file top-to-bottom and builds the corresponding block.
@@ -138,6 +140,8 @@ def process(src_folder: Path, output_folder: Path, inline: bool):
 # We will be using a [`Parser`](ref:illiterate.core:Parser) class that does all the heavy-lifting.
 # We feed the parser with the input and it will return an object (of type [`Content`](ref:illiterate.core:Content))
 # that knows how to write itself into a file in Markdown.
+# Note that we just used two internal references in the previous sentences. We'll see how these special constructions
+# are handled when look at the parser implementation but, spoiler alert, it involves some regex.
 
 from .core import Parser
 
