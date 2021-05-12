@@ -38,8 +38,9 @@ from typing import Iterable, TextIO, List
 
 
 class Block(abc.ABC):
-    def __init__(self, content: List[str], module_name: str):
+    def __init__(self, content: List[str], module_name: str, lineno:int):
         self.module_name = module_name
+        self.lineno = lineno
 
         while content:
             if not content[0].strip():  # testing for emptyness
@@ -54,6 +55,9 @@ class Block(abc.ABC):
                 break
 
         self.content = content
+
+    def __str__(self):
+        return "".join(self.content)
 
     @abc.abstractmethod
     def print(self, fp: TextIO):
@@ -191,6 +195,7 @@ class Parser:
         self.module_name = module_name
         self.content = []
         self.state = State.Markdown
+        self.lineno = 1
 
     # The automaton switches states according to the first character of the current line.
     # Intuitively, as long as we are seeing either a `#` or blank lines, we are
@@ -252,11 +257,13 @@ class Parser:
             return []
 
         if self.state == State.Markdown:
-            self.content.append(Markdown(current, self.module_name))
+            self.content.append(Markdown(current, self.module_name, self.lineno))
         elif self.state == State.Python:
-            self.content.append(Python(current, self.module_name))
+            self.content.append(Python(current, self.module_name, self.lineno))
         elif self.state == State.Docstring:
-            self.content.append(Docstring(current, self.module_name))
+            self.content.append(Docstring(current, self.module_name, self.lineno))
+
+        self.lineno += len(current)
 
         return []
 
