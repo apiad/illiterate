@@ -1,7 +1,7 @@
 """This module contains the illiterate CLI application.
 
 The CLI application is basically a [Typer](https://typer.tiangolo.com) application
-with a single command, that launches the whole process.
+with three commands, that manage the whole process.
 """
 
 # The illiterate CLI app is a very simple [Typer](https://typer.tiangolo.com)
@@ -35,7 +35,8 @@ import shutil
 import logging
 from rich.logging import RichHandler
 
-# Here is the implementation of the main command called build.
+# Here is the implementation of the build command
+# is called when `python -m illiterate build` is used.
 
 
 @app.command()
@@ -66,7 +67,10 @@ def build(
 
 # then we have the implementation of the commands associated with the `preset` subcommand
 
-# This is the implementation of the `preset build` command
+# This is the implementation of the `preset build` subcommand
+# which is called when `python -m illiterate preset build` is used.
+
+
 @preset.command(name="build")
 def preset_build(file: Path = None, debug: bool = None):
 
@@ -78,8 +82,10 @@ def preset_build(file: Path = None, debug: bool = None):
 
     if yml_file.exists():
         try:
+            # This function does all the heavy-lifting...
             process_yml(yml_file)
         except:
+            # And if it fails we print the appropriate message
             typer.echo(
                 typer.style(
                     "The configuration file is corrupt or misconfigured.",
@@ -94,21 +100,27 @@ def preset_build(file: Path = None, debug: bool = None):
         )
 
 
-# And this is the implementation of the 'preset init' command
-@preset.command(name='init')
+# And this is the implementation of the 'preset init' subcommand
+# which is called when `python -m illiterate preset build` is used.
+
+
+@preset.command(name="init")
 def preset_init(
     src_folder: Path,
     output_folder: Path,
     copy: List[str] = None,
     inline: bool = False,
 ):
+    # We create a configuration prototype inside a dictionary
     yml_data = {"output": str(output_folder), "inline": inline, "sources": {}}
 
+    # Then we add the files from the input folder to the configuration
     for path in src_folder.rglob("*.py"):
         yml_data["sources"][str(path.with_name(path.stem)).replace("/", ".")] = str(
             path
         )
 
+    # And the files to be copied as well
     if copy:
         for fname in copy:
             if ":" in fname:
