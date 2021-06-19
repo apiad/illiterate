@@ -10,13 +10,10 @@ with three commands, that manage the whole process.
 # and it takes advantage of Python type annotations to provide argument parsing
 # and documentation.
 
-from os import name
+
 from click.termui import style
 import typer
 import yaml
-
-# This is the main function that does all the heavy lifting.
-
 from . import process, process_yml
 
 # We create a ` typer` application representing a sub-command
@@ -35,8 +32,11 @@ import shutil
 import logging
 from rich.logging import RichHandler
 
+# ## The build command
+
 # Here is the implementation of the build command
 # is called when `python -m illiterate build` is used.
+# This command parse and creates the documentation based on its input parameters.
 
 
 @app.command()
@@ -67,10 +67,31 @@ def build(
 
 # then we have the implementation of the commands associated with the `preset` subcommand
 
-# This is the implementation of the `preset build` subcommand
-# which is called when `python -m illiterate preset build` is used.
+# ## The `preset build` subcommand
+
+# The  `preset build` subcommand
+# is called when `python -m illiterate preset build` is used.
+# This command parse and creates the documentation based on a preconfigured file
 
 
+# A good example of what a configuration file might look like
+# is the one used for this project.
+# The configuration files are called illiterate.yml
+# imitating the mkdocs configuration files and have the following shape
+
+
+# ```yml
+# inline: true # true if we want to process the comments within code blocks
+# output: docs # The address of the output folder
+# sources: # List of files to be processed or copied
+#   illiterate.__init__: illiterate/__init__.py # An input is made up of the address of the output file without suffix and using periods as a separator and the address of the input file.
+#   illiterate.__main__: illiterate/__main__.py
+#   illiterate.cli: illiterate/cli.py
+#   illiterate.core: illiterate/core.py
+#   index: Readme.md
+# ```
+
+# This is the implementation
 @preset.command(name="build")
 def preset_build(file: Path = None, debug: bool = None):
 
@@ -100,10 +121,14 @@ def preset_build(file: Path = None, debug: bool = None):
         )
 
 
-# And this is the implementation of the 'preset init' subcommand
-# which is called when `python -m illiterate preset build` is used.
+# ## The `preset build`
 
+# The 'preset init' subcommand
+# is called when `python -m illiterate preset build` is used.
+# This command creates a preset based on its input parameters.
+# Its input parameters and those of the `python -m illiterate build` command match.
 
+# This is the implementation
 @preset.command(name="init")
 def preset_init(
     src_folder: Path,
