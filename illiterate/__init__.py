@@ -137,9 +137,15 @@ def process(src_folder: Path, output_folder: Path, inline: bool):
 
 # ### An approximation to presets
 
+# The configuration files have an almost indisputable use.
+# Having them facilitates the maintenance and extensibility
+# processes associated with IT projects.
+
+# We are going to base our configuration files on the yaml
+# format and for that we need to import the corresponding parsers.
 from yaml import safe_load
 
-
+# The next method is the manager of the documentation construction process.
 def process_yml(yml: Path):
     """Processes all the Python source files in illiterate.yml file,
     and writes the corresponding Markdown files to `output_folder`.
