@@ -95,6 +95,7 @@ If you don't, then we have done a pretty bad job.
 # We will use `pathlib.Path` for that purpose.
 
 from pathlib import Path
+import shutil
 
 # Next comes our top level function that processes each file.
 # Notice how we also have docstrings in each function, as usual.
@@ -134,6 +135,37 @@ def process(src_folder: Path, output_folder: Path, inline: bool):
         process_one(input_path, output_path, inline)
 
 
+# ### An approximation to presets
+
+from yaml import safe_load
+
+
+def process_yml(yml: Path):
+    """Processes all the Python source files in illiterate.yml file,
+    and writes the corresponding Markdown files to `output_folder`.
+    """
+
+    config: dict
+    with open(yml, "r") as f:
+        config = safe_load(f)
+
+    output_folder = config["output"]
+    # In this case each input file  is the value in  *(key,value)* pair in config['output'] *dictionary*
+
+    for key, input_path in track(config["sources"].items(), description="Processing"):
+        # The output file is the result of processing the key in  *(key,value)* pair in config['output'] *dictionary*
+        output_path = Path(output_folder) / ".".join(Path(key).with_suffix(".md").parts)
+
+        input_path = Path(input_path)
+
+        if input_path.suffix == ".md":
+            shutil.copy(input_path, output_path)
+        else:
+            process_one(
+                input_path, output_path, "inline" in config and config["inline"]
+            )
+
+
 # ### Processing each file
 
 # Processing a single file is quite straightforward as well.
@@ -159,6 +191,8 @@ def process_one(input_path: Path, output_path: Path, inline: bool):
     # And then we dump the parsed content.
     with output_path.open("w") as fp:
         content.dump(fp)
+
+    print(input_path, output_path)
 
 
 # And that's it. As you can see, being forced to describe our process in this way also
