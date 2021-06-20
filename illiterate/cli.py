@@ -5,7 +5,7 @@ with three commands, that manage the whole process.
 """
 
 # The illiterate CLI app is a very simple [Typer](https://typer.tiangolo.com)
-# application with a single command.
+# application with three commands.
 # Typer is a CLI creation tool where you define commands as methods,
 # and it takes advantage of Python type annotations to provide argument parsing
 # and documentation.
