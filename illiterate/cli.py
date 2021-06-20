@@ -121,7 +121,7 @@ def preset_build(file: Path = None, debug: bool = None):
         )
 
 
-# ## The `preset build`
+# ## The `preset init` subcomand
 
 # The 'preset init' subcommand
 # is called when `python -m illiterate preset build` is used.
