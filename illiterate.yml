@@ -1,0 +1,8 @@
+inline: true
+output: docs
+sources:
+  illiterate.__init__: illiterate/__init__.py
+  illiterate.__main__: illiterate/__main__.py
+  illiterate.cli: illiterate/cli.py
+  illiterate.core: illiterate/core.py
+  index: Readme.md
