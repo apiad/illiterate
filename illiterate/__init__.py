@@ -198,8 +198,6 @@ def process_one(input_path: Path, output_path: Path, inline: bool):
     with output_path.open("w") as fp:
         content.dump(fp)
 
-    print(input_path, output_path)
-
 
 # And that's it. As you can see, being forced to describe our process in this way also
 # forces us to write pretty small methods, and to organize our code in the way that is
