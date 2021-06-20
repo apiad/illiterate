@@ -92,7 +92,7 @@ I do this for copying the `Readme.md` into an `index.md` which becomes the homep
 
 For example, in this project, standing on the root folder (where this Readme is located), you would run the following (🤓 yeah, it is kind if Inception-ish):
 
-    python -m illiterate illiterate docs --copy Readme.md:index.md
+    python -m illiterate build illiterate docs --copy Readme.md:index.md
 
 This will take all the code in `illiterate`, convert it to Markdown, and drop it inside the `docs` folder.
 It will also copy the `Readme.md` file into `docs/index.md`.
