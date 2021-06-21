@@ -38,7 +38,7 @@ from typing import Iterable, TextIO, List
 
 
 class Block(abc.ABC):
-    def __init__(self, content: List[str], module_name: str, lineno:int):
+    def __init__(self, content: List[str], module_name: str, lineno: int):
         self.module_name = module_name
         self.lineno = lineno
 

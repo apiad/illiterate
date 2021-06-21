@@ -85,17 +85,34 @@ It will parse all your code, and output nicely formatted Markdown versions of ea
 
 To use it, you simply run:
 
-    python -m illiterate [src] [output]
+    python -m illiterate build [src] [output]
 
 Where `[src]` is the folder that is the root of your project's code (i.e., the top-level folder with an `__init__.py` inside), and `[output]` is where you want the markdown files. You can add `--copy from:to` to copy verbatim some files into the output folder.
 I do this for copying the `Readme.md` into an `index.md` which becomes the homepage.
 
 For example, in this project, standing on the root folder (where this Readme is located), you would run the following (🤓 yeah, it is kind if Inception-ish):
 
-    python -m illiterate illiterate docs --copy Readme.md:index.md
+    python -m illiterate build illiterate docs --copy Readme.md:index.md
 
 This will take all the code in `illiterate`, convert it to Markdown, and drop it inside the `docs` folder.
 It will also copy the `Readme.md` file into `docs/index.md`.
+
+### A tweak using settings.
+
+The same procedure can be obtained using configuration files. The configuration files have the following structure:
+
+```yml
+inline: true # true if we want to process the comments within code blocks
+output: docs # The address of the output folder
+sources: # List of files to be processed or copied
+  sample_module.file: sample_module/file.py  # An input is made up of the address of the output file without suffix and using periods as a separator and the address of the input file.
+```
+
+The configuration is usually in a file called **illiterate.yml** somehow mimicking mkdocs.
+
+Although these configuration files can be done completely by hand, we recommend using the command `python -m illiterate preset init` to create it. This command uses the same parameters as the `python -m illiterate build` command but instead of parsing the code directly it creates the appropriate configuration file.
+As long as we have a configuration file to start with, we can modify it and include other details to suit our purpose as our code progresses. Then we can make illiterate work according to that setting using the command `python -m illiterate preset build` to build the Markdowns.
+
 
 What you do with those Markdowns is up to you. In this project, I use [mkdocs](https://mkdocs.org) for documentation. 
 If you have `mkdocs`, then make sure to have your `mkdocs.yml` correctly configured so that it renders those freshly created markdowns. 
