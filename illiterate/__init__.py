@@ -95,6 +95,7 @@ If you don't, then we have done a pretty bad job.
 # We will use `pathlib.Path` for that purpose.
 
 from pathlib import Path
+import shutil
 
 # Next comes our top level function that processes each file.
 # Notice how we also have docstrings in each function, as usual.
@@ -132,6 +133,43 @@ def process(src_folder: Path, output_folder: Path, inline: bool):
         # using "." as separator, and rooted at `output_path`.
         output_path = output_folder / ".".join(input_path.with_suffix(".md").parts)
         process_one(input_path, output_path, inline)
+
+
+# ### An approximation to presets
+
+# The configuration files have an almost indisputable use.
+# Having them facilitates the maintenance and extensibility
+# processes associated with IT projects.
+
+# We are going to base our configuration files on the yaml
+# format and for that we need to import the corresponding parsers.
+from yaml import safe_load
+
+# The next method is the manager of the documentation construction process.
+def process_yml(yml: Path):
+    """Processes all the Python source files in illiterate.yml file,
+    and writes the corresponding Markdown files to `output_folder`.
+    """
+
+    config: dict
+    with open(yml, "r") as f:
+        config = safe_load(f)
+
+    output_folder = config["output"]
+    # In this case each input file  is the value in  *(key,value)* pair in config['output'] *dictionary*
+
+    for key, input_path in track(config["sources"].items(), description="Processing"):
+        # The output file is the result of processing the key in  *(key,value)* pair in config['output'] *dictionary*
+        output_path = Path(output_folder) / ".".join(Path(key).with_suffix(".md").parts)
+
+        input_path = Path(input_path)
+
+        if input_path.suffix == ".md":
+            shutil.copy(input_path, output_path)
+        else:
+            process_one(
+                input_path, output_path, "inline" in config and config["inline"]
+            )
 
 
 # ### Processing each file
