@@ -160,7 +160,7 @@ def process_yml(yml: Path):
 
     for key, input_path in track(config["sources"].items(), description="Processing"):
         # The output file is the result of processing the key in  *(key,value)* pair in config['output'] *dictionary*
-        output_path = Path(output_folder) / ".".join(Path(key).with_suffix(".md").parts)
+        output_path = Path(output_folder) / ".".join(Path(key.replace('.','/')).with_suffix(".md").parts)
 
         input_path = Path(input_path)
 
