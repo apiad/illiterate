@@ -160,8 +160,11 @@ def process_yml(yml: Path):
 
     for key, input_path in track(config["sources"].items(), description="Processing"):
         # The output file is the result of processing the key in  *(key,value)* pair in config['output'] *dictionary*
-        output_path = Path(output_folder) / ".".join(Path(key.replace('.','/')).with_suffix(".md").parts)
+        k_path = Path(key)
+        if k_path.suffix != '.md':
+            k_path = Path(key+'.md')
 
+        output_path = Path(output_folder) / k_path
         input_path = Path(input_path)
 
         if input_path.suffix == ".md":
@@ -187,7 +190,6 @@ from .core import Parser
 def process_one(input_path: Path, output_path: Path, inline: bool):
     # We need to create this folder hierarchy if it doesn't exists:
     output_path.parent.mkdir(exist_ok=True)
-
     # First we parse, passing also the computed name for the module (without .md).
     with input_path.open() as fp:
         content = Parser(
