@@ -1,4 +1,5 @@
-"""Illiterate is a Python library for crafting self-documenting code, 
+"""
+Illiterate is a Python library for crafting self-documenting code, 
 loosely following the literate programming paradigm.
 
 The library itself is coded following illiterate "best practices", 

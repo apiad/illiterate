@@ -1,4 +1,5 @@
-"""This module contains the classes that represent the types of content 
+"""
+This module contains the classes that represent the types of content 
 inside a Python file and perform the necessary conversions.
 """
 

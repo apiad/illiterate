@@ -1,4 +1,5 @@
-"""This module contains the illiterate CLI application.
+"""
+This module contains the illiterate CLI application.
 
 The CLI application is basically a [Typer](https://typer.tiangolo.com) application
 with three commands, that manage the whole process.
@@ -129,7 +130,7 @@ def preset_build(file: Path = None, debug: bool = None):
 # ## The `preset init` subcomand
 
 # The 'preset init' subcommand
-# is called when `python -m illiterate preset build` is used.
+# is called when `python -m illiterate preset init` is used.
 # This command creates a preset based on its input parameters.
 # Its input parameters and those of the `python -m illiterate build` command match.
 
