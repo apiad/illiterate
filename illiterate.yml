@@ -1,5 +1,5 @@
-inline: true
 output: docs
+inline: true
 sources:
   illiterate.__init__: illiterate/__init__.py
   illiterate.__main__: illiterate/__main__.py
