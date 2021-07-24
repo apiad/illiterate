@@ -1,4 +1,5 @@
-"""Illiterate is a Python library for crafting self-documenting code, 
+"""
+Illiterate is a Python library for crafting self-documenting code, 
 loosely following the literate programming paradigm.
 
 The library itself is coded following illiterate "best practices", 
@@ -94,8 +95,10 @@ If you don't, then we have done a pretty bad job.
 # For example `src/moduleA/moduleB/file.py` will become `output/moduleA.moduleB.file.md`.
 # We will use `pathlib.Path` for that purpose.
 
-from pathlib import Path
 import shutil
+from pathlib import Path
+
+from rich.progress import track
 
 # Next comes our top level function that processes each file.
 # Notice how we also have docstrings in each function, as usual.
@@ -116,7 +119,6 @@ import shutil
 
 # One more thing, before I forget, is that we want [fancy progress bars](https://rich.readthedocs.io/).
 
-from rich.progress import track
 
 # And finally, as promised, here comes the function.
 
@@ -145,6 +147,7 @@ def process(src_folder: Path, output_folder: Path, inline: bool):
 # format and for that we need to import the corresponding parsers.
 from yaml import safe_load
 
+
 # The next method is the manager of the documentation construction process.
 def process_yml(yml: Path):
     """Processes all the Python source files in illiterate.yml file,
@@ -160,8 +163,11 @@ def process_yml(yml: Path):
 
     for key, input_path in track(config["sources"].items(), description="Processing"):
         # The output file is the result of processing the key in  *(key,value)* pair in config['output'] *dictionary*
-        output_path = Path(output_folder) / ".".join(Path(key.replace('.','/')).with_suffix(".md").parts)
+        k_path = Path(key)
+        if k_path.suffix != ".md":
+            k_path = Path(key + ".md")
 
+        output_path = Path(output_folder) / k_path
         input_path = Path(input_path)
 
         if input_path.suffix == ".md":
@@ -187,7 +193,6 @@ from .core import Parser
 def process_one(input_path: Path, output_path: Path, inline: bool):
     # We need to create this folder hierarchy if it doesn't exists:
     output_path.parent.mkdir(exist_ok=True)
-
     # First we parse, passing also the computed name for the module (without .md).
     with input_path.open() as fp:
         content = Parser(

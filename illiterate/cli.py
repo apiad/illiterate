@@ -1,4 +1,5 @@
-"""This module contains the illiterate CLI application.
+"""
+This module contains the illiterate CLI application.
 
 The CLI application is basically a [Typer](https://typer.tiangolo.com) application
 with three commands, that manage the whole process.
@@ -11,9 +12,12 @@ with three commands, that manage the whole process.
 # and documentation.
 
 
-from click.termui import style
+from itertools import chain
+
 import typer
 import yaml
+from click.termui import style
+
 from . import process, process_yml
 
 # We create a ` typer` application representing a sub-command
@@ -26,11 +30,13 @@ app.add_typer(preset, name="preset")
 
 # These are the types for our arguments, and `shutil` for copying files.
 
+import logging
+import shutil
 from pathlib import Path
 from typing import List
-import shutil
-import logging
+
 from rich.logging import RichHandler
+from rich.progress import track
 
 # ## The build command
 
@@ -124,14 +130,14 @@ def preset_build(file: Path = None, debug: bool = None):
 # ## The `preset init` subcomand
 
 # The 'preset init' subcommand
-# is called when `python -m illiterate preset build` is used.
+# is called when `python -m illiterate preset init` is used.
 # This command creates a preset based on its input parameters.
 # Its input parameters and those of the `python -m illiterate build` command match.
 
 # This is the implementation
 @preset.command(name="init")
 def preset_init(
-    src_folder: Path,
+    src_folders: List[Path],
     output_folder: Path,
     copy: List[str] = None,
     inline: bool = False,
@@ -140,11 +146,12 @@ def preset_init(
     yml_data = {"output": str(output_folder), "inline": inline, "sources": {}}
 
     # Then we add the files from the input folder to the configuration
-    for path in src_folder.rglob("*.py"):
-        yml_data["sources"][str(path.with_name(path.stem)).replace("/", ".")] = str(
-            path
-        )
 
+    for path in track(
+        list(chain(*[source.rglob("*.py") for source in src_folders])),
+        description="😃 Working 😃",
+    ):
+        yml_data["sources"][str(path.with_name(path.stem))] = str(path)
     # And the files to be copied as well
     if copy:
         for fname in copy:

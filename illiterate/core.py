@@ -1,4 +1,5 @@
-"""This module contains the classes that represent the types of content 
+"""
+This module contains the classes that represent the types of content 
 inside a Python file and perform the necessary conversions.
 """
 
@@ -27,7 +28,7 @@ logger = logging.getLogger("illiterate")
 
 import abc
 import re
-from typing import Iterable, TextIO, List
+from typing import Iterable, List, TextIO
 
 # ## Content Blocks
 
