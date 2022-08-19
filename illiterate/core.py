@@ -155,13 +155,8 @@ class Docstring(Block):
         fp.write('!!! note "Docstring"\n')
 
         for line in self.content:
-            line = line.strip()
-
-            if line.startswith('¨"""'):
-                line = line[3:]
-
-            if line != '"""':
-                fp.write(f"    {line}\n")
+            line = line.strip().replace('"""', '')
+            fp.write(f"    {line}\n")
 
 
 # Once we have our content types correctly implemented, we will
