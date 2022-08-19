@@ -152,7 +152,7 @@ class Python(Block):
 
 class Docstring(Block):
     def print(self, fp: TextIO):
-        fp.write('!!! note "Docstring"\n')
+        fp.write('??? note "Docstring"\n')
 
         for line in self.content:
             line = line.strip().replace('"""', '')
