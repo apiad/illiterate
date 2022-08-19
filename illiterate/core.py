@@ -1,4 +1,4 @@
-"""This module contains the classes that represent the types of content 
+"""This module contains the classes that represent the types of content
 inside a Python file and perform the necessary conversions.
 """
 
@@ -116,7 +116,7 @@ class Python(Block):
 
         fp.write("\n".join(self.get_anchors()) + "\n\n")
 
-        fp.write("```python\n")
+        fp.write(f'```python linenums="{self.lineno}"\n')
 
         for line in self.content:
             fp.write(line)
@@ -152,10 +152,13 @@ class Python(Block):
 
 class Docstring(Block):
     def print(self, fp: TextIO):
-        fp.write("!!! note\n")
+        fp.write('!!! note "Docstring"\n')
 
         for line in self.content:
             line = line.strip()
+
+            if line.startswith('¨"""'):
+                line = line[3:]
 
             if line != '"""':
                 fp.write(f"    {line}\n")
