@@ -140,7 +140,7 @@ def process(input_path: Path, output_path: Path, config: IlliterateConfig):
     # Otherwise, we parse, passing also the file name.
     with input_path.open() as fp:
         content = Parser(
-            fp, config=config, module_name=input_path.name
+            fp, config=config, module_name=input_path.name, location=input_path.parent
         ).parse()
 
     # And then we dump the parsed content.

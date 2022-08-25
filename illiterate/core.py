@@ -2,11 +2,10 @@
 inside a Python file and perform the necessary conversions.
 """
 from __future__ import annotations
-from email.generator import Generator
 
 import logging
-
-from importlib_metadata import collections
+import collections
+from pathlib import Path
 
 from illiterate.config import IlliterateConfig
 
@@ -14,8 +13,10 @@ logger = logging.getLogger("illiterate")
 
 # To represent the different types of content in a single Python file,
 # we will use three classes.
-# These classes will represent, respectively, a block of [Markdown](ref:illiterate.core:Markdown) text,
-# a block of [Python](ref:illiterate.core:Python) code, and a top-level [docstring](ref:illiterate.core:Docstring).
+# These classes will represent, respectively,
+# a block of [Markdown](ref:illiterate.core:Markdown) text,
+# a block of [Python](ref:illiterate.core:Python) code,
+# and a top-level [docstring](ref:illiterate.core:Docstring).
 
 # The only difference between these types of content that we care of
 # is how they are printed as Markdown.
@@ -88,6 +89,7 @@ class Block(abc.ABC):
 
 class Markdown(Block):
     hl_re = re.compile(r":hl:(?P<ref>[a-zA-Z0-9_]+):")
+    include_re = re.compile(r":include:((?P<start>\-?\d+):)?((?P<end>\-?\d+):)?(?P<file>.*):")
 
     def print(self, fp: TextIO, content: Content):
         for line in self.content:
@@ -98,6 +100,18 @@ class Markdown(Block):
                     ref = match.group("ref")
                     block = content[ref]
                     block.print(fp, content)
+                    continue
+
+                if (match := self.include_re.search(line)):
+                    start = int(match.group('start') or 0) - 1
+                    end = int(match.group('end') or -1)
+                    file = match.group('file')
+
+                    with open(content.location / file) as include:
+                        lines = include.readlines()
+
+                        for line in lines[start:end]:
+                            fp.write(line)
                     continue
 
                 fp.write(line[2:] + "\n")
@@ -245,9 +259,10 @@ class Docstring(Block):
 
 
 class Content:
-    def __init__(self, content: List[Block], config: IlliterateConfig) -> None:
+    def __init__(self, content: List[Block], config: IlliterateConfig, location:Path) -> None:
         self.content = content
         self.config = config
+        self.location = location
         self._by_name = {block.name: block for block in content}
 
         for block in content:
@@ -276,7 +291,7 @@ class Content:
 
 class Parser:
     def __init__(
-        self, input_src: TextIO, module_name: str, config: IlliterateConfig
+        self, input_src: TextIO, module_name: str, config: IlliterateConfig, location:Path
     ) -> None:
         self.input_src = input_src
         self.config = config
@@ -284,6 +299,7 @@ class Parser:
         self.content = []
         self.state = State.Markdown
         self.lineno = 1
+        self.location = location
 
     # The automaton switches states according to the first character of the current line.
     # Intuitively, as long as we are seeing either a `#` or blank lines, we are
@@ -334,7 +350,7 @@ class Parser:
 
         self.store(current)
 
-        return Content(self.content, self.config)
+        return Content(self.content, self.config, self.location)
 
     # This small utility function creates the actual `Block` instance.
     # We make return an empty list so that we can use it as shown before,
