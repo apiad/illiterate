@@ -1,7 +1,7 @@
-"""Illiterate is a Python library for crafting self-documenting code, 
+"""Illiterate is a Python library for crafting self-documenting code,
 loosely following the literate programming paradigm.
 
-The library itself is coded following illiterate "best practices", 
+The library itself is coded following illiterate "best practices",
 so by reading this, either in source code or in the rendered documentation,
 you should be able to understand what we want to achieve.
 If you don't, then we have done a pretty bad job.
@@ -114,64 +114,6 @@ import shutil
 # comments are already enough to make everything as clear as it needs to be.
 # If a method, including comments, is longer than one screen of text, consider refactoring it.
 
-# One more thing, before I forget, is that we want [fancy progress bars](https://rich.readthedocs.io/).
-
-from rich.progress import track
-
-# And finally, as promised, here comes the function.
-
-
-def process(src_folder: Path, output_folder: Path, inline: bool):
-    """Processes all the Python source files in `src_folder`, recursively,
-    and writes the corresponding Markdown files to `output_folder`.
-    """
-
-    # Each input file can be found recursively with `.rglob`,
-    # which works pretty much like `ls -lR`.
-    for input_path in track(list(src_folder.rglob("*.py")), description="Processing"):
-        # The output path matches the input path but with the right extension,
-        # using "." as separator, and rooted at `output_path`.
-        output_path = output_folder / ".".join(input_path.with_suffix(".md").parts)
-        process_one(input_path, output_path, inline)
-
-
-# ### An approximation to presets
-
-# The configuration files have an almost indisputable use.
-# Having them facilitates the maintenance and extensibility
-# processes associated with IT projects.
-
-# We are going to base our configuration files on the yaml
-# format and for that we need to import the corresponding parsers.
-from yaml import safe_load
-
-# The next method is the manager of the documentation construction process.
-def process_yml(yml: Path):
-    """Processes all the Python source files in illiterate.yml file,
-    and writes the corresponding Markdown files to `output_folder`.
-    """
-
-    config: dict
-    with open(yml, "r") as f:
-        config = safe_load(f)
-
-    output_folder = config["output"]
-    # In this case each input file  is the value in  *(key,value)* pair in config['output'] *dictionary*
-
-    for key, input_path in track(config["sources"].items(), description="Processing"):
-        # The output file is the result of processing the key in  *(key,value)* pair in config['output'] *dictionary*
-        output_path = Path(output_folder) / ".".join(Path(key.replace('.','/')).with_suffix(".md").parts)
-
-        input_path = Path(input_path)
-
-        if input_path.suffix == ".md":
-            shutil.copy(input_path, output_path)
-        else:
-            process_one(
-                input_path, output_path, "inline" in config and config["inline"]
-            )
-
-
 # ### Processing each file
 
 # Processing a single file is quite straightforward as well.
@@ -184,11 +126,16 @@ def process_yml(yml: Path):
 from .core import Parser
 
 
-def process_one(input_path: Path, output_path: Path, inline: bool):
+def process(input_path: Path, output_path: Path, inline: bool):
     # We need to create this folder hierarchy if it doesn't exists:
     output_path.parent.mkdir(exist_ok=True)
 
-    # First we parse, passing also the computed name for the module (without .md).
+    # First we check if this is just a regular copy
+    if input_path.suffix != ".py":
+        shutil.copy(input_path, output_path)
+        return
+
+    # Otherwise, we parse, passing also the computed name for the module (without .md).
     with input_path.open() as fp:
         content = Parser(
             fp, inline=inline, module_name=output_path.with_suffix("").name
