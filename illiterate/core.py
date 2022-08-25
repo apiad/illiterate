@@ -1,8 +1,13 @@
 """This module contains the classes that represent the types of content
 inside a Python file and perform the necessary conversions.
 """
+from __future__ import annotations
+from email.generator import Generator
 
 import logging
+import math
+
+from importlib_metadata import collections
 
 logger = logging.getLogger("illiterate")
 
@@ -27,7 +32,7 @@ logger = logging.getLogger("illiterate")
 
 import abc
 import re
-from typing import Iterable, TextIO, List
+from typing import Any, Iterable, TextIO, List
 
 # ## Content Blocks
 
@@ -38,9 +43,10 @@ from typing import Iterable, TextIO, List
 
 
 class Block(abc.ABC):
-    def __init__(self, content: List[str], module_name: str, lineno: int):
+    def __init__(self, name: str, content: List[str], module_name: str, lineno: int):
         self.module_name = module_name
         self.lineno = lineno
+        self.name = name
 
         while content:
             if not content[0].strip():  # testing for emptyness
@@ -60,8 +66,11 @@ class Block(abc.ABC):
         return "".join(self.content)
 
     @abc.abstractmethod
-    def print(self, fp: TextIO):
+    def print(self, fp: TextIO, content: Content):
         pass
+
+    def extra(self) -> List[Block]:
+        return []
 
 
 # Markdown blocks are either formed by lines starting with `#`
@@ -77,11 +86,18 @@ class Block(abc.ABC):
 
 
 class Markdown(Block):
-    def print(self, fp: TextIO):
+    hl_re = re.compile(r":hl:(?P<ref>[a-zA-Z0-9_]+):")
+
+    def print(self, fp: TextIO, content: Content):
         for line in self.content:
             line = self.fix_links(line.strip())
 
             if line.startswith("# "):
+                if (match := self.hl_re.search(line)):
+                    ref = match.group('ref')
+                    block = content[ref]
+                    block.print(fp, content)
+
                 fp.write(line[2:] + "\n")
             else:
                 fp.write("\n")
@@ -110,16 +126,36 @@ class Markdown(Block):
 
 
 class Python(Block):
-    def print(self, fp: TextIO):
+    def __init__(
+        self,
+        name: str,
+        content: List[str],
+        module_name: str,
+        lineno: int,
+        *,
+        highlights=None,
+    ):
+        super().__init__(name, content, module_name, lineno)
+
+        if highlights:
+            self.highlights = " ".join(str(i + 1) for i in highlights)
+        else:
+            self.highlights = " ".join(
+                [str(i + 1) for i, l in enumerate(self.content) if ":hl:" in l]
+            )
+
+    def print(self, fp: TextIO, content: Content):
         if not self.content:
             return
 
         fp.write("\n".join(self.get_anchors()) + "\n\n")
 
-        fp.write(f'```python linenums="{self.lineno}"\n')
+        highlights = f'hl_lines="{self.highlights}"' if self.highlights else ""
+
+        fp.write(f'```python linenums="{self.lineno}" {highlights}\n')
 
         for line in self.content:
-            fp.write(line)
+            fp.write(self.strip(line) + "\n")
 
         fp.write("```\n\n")
 
@@ -145,17 +181,54 @@ class Python(Block):
 
         return anchors
 
+    def strip(self, line: str):
+        result = []
+        comment = False
+
+        for c in line:
+            if c == "#":
+                comment = True
+
+            if c == ":" and comment:
+                break
+
+            result.append(c)
+
+        return "".join(result).rstrip().rstrip("#")
+
+    ref_re = re.compile(r":ref:(?P<ref>[a-zA-Z0-9_]+):")
+
+    def extra(self):
+        refs = collections.defaultdict(list)
+
+        for i, line in enumerate(self.content):
+            if (match := self.ref_re.search(line)) :
+                refs[match.group("ref")].append(i)
+
+                print(refs)
+
+        return [
+            Python(
+                name=key,
+                content=self.content,
+                module_name=self.module_name,
+                lineno=self.lineno,
+                highlights=value,
+            )
+            for key, value in refs.items()
+        ]
+
 
 # Another interesting type of content is module-level docstrings.
 # Instead of outputting these as standard Python code, we'll use a block quote.
 
 
 class Docstring(Block):
-    def print(self, fp: TextIO):
+    def print(self, fp: TextIO, content: Content):
         fp.write('??? note "Docstring"\n')
 
         for line in self.content:
-            line = line.strip().replace('"""', '')
+            line = line.strip().replace('"""', "")
             fp.write(f"    {line}\n")
 
 
@@ -166,12 +239,20 @@ class Docstring(Block):
 
 
 class Content:
-    def __init__(self, *content: Iterable[Block]) -> None:
+    def __init__(self, content: List[Block]) -> None:
         self.content = content
+        self._by_name = {block.name: block for block in content}
+
+        for block in content:
+            for extra in block.extra():
+                self._by_name[extra.name] = extra
+
+    def __getitem__(self, key) -> Block:
+        return self._by_name[key]
 
     def dump(self, fp: TextIO):
         for block in self.content:
-            block.print(fp)
+            block.print(fp, self)
 
 
 # ## The Parser
@@ -244,7 +325,7 @@ class Parser:
 
         self.store(current)
 
-        return Content(*self.content)
+        return Content(self.content)
 
     # This small utility function creates the actual `Block` instance.
     # We make return an empty list so that we can use it as shown before,
@@ -254,12 +335,14 @@ class Parser:
         if not current:
             return []
 
+        name = f"block-{len(self.content)}"
+
         if self.state == State.Markdown:
-            self.content.append(Markdown(current, self.module_name, self.lineno))
+            self.content.append(Markdown(name, current, self.module_name, self.lineno))
         elif self.state == State.Python:
-            self.content.append(Python(current, self.module_name, self.lineno))
+            self.content.append(Python(name, current, self.module_name, self.lineno))
         elif self.state == State.Docstring:
-            self.content.append(Docstring(current, self.module_name, self.lineno))
+            self.content.append(Docstring(name, current, self.module_name, self.lineno))
 
         self.lineno += len(current)
 
