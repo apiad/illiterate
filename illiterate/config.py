@@ -7,6 +7,9 @@ from pydantic import BaseModel
 
 class IlliterateConfig(BaseModel):
     inline: bool = False
+    title: bool = False
+    linenums: bool = False
+    highlights: bool = False
     sources: Dict[str, str]
 
     def expanded(self) -> IlliterateConfig:
@@ -21,31 +24,28 @@ class IlliterateConfig(BaseModel):
                 input_paths = Path.cwd().rglob(input_pattern)
 
             for input_path in input_paths:
-                input_str = str(input_path)[prefix_len+1:]
+                input_str = str(input_path)[prefix_len + 1 :]
                 output_str = output_pattern.replace("*", input_path.stem)
 
                 if Path(output_str).is_dir():
-                    output_str = (Path(output_str) / input_str)
+                    output_str = Path(output_str) / input_str
 
                     if input_path.suffix == ".py":
                         output_str = output_str.with_suffix(".md")
 
                 expanded_sources[input_str] = str(output_str)
 
-        return  IlliterateConfig(inline=self.inline, sources=expanded_sources)
+        return IlliterateConfig(inline=self.inline, sources=expanded_sources)
 
     @classmethod
-    def make(cls, inline:bool, sources:List[str]):
+    def make(cls, *, sources: List[str], **kwargs):
         source_dict = {}
 
         for line in sources:
-            input, output = line.split(':')
+            input, output = line.split(":")
             source_dict[input] = output
 
-        return cls(
-            inline=inline,
-            sources=source_dict,
-        )
+        return cls(sources=source_dict, **kwargs)
 
     def files(self):
         for input_path, output_path in self.expanded().sources.items():

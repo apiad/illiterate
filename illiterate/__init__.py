@@ -97,6 +97,8 @@ If you don't, then we have done a pretty bad job.
 from pathlib import Path
 import shutil
 
+from illiterate.config import IlliterateConfig
+
 # Next comes our top level function that processes each file.
 # Notice how we also have docstrings in each function, as usual.
 # Docstrings are for guiding developers when inspecting our code via IntelliSense and such.
@@ -126,7 +128,7 @@ import shutil
 from .core import Parser
 
 
-def process(input_path: Path, output_path: Path, inline: bool):
+def process(input_path: Path, output_path: Path, config: IlliterateConfig):
     # We need to create this folder hierarchy if it doesn't exists:
     output_path.parent.mkdir(exist_ok=True)
 
@@ -135,10 +137,10 @@ def process(input_path: Path, output_path: Path, inline: bool):
         shutil.copy(input_path, output_path)
         return
 
-    # Otherwise, we parse, passing also the computed name for the module (without .md).
+    # Otherwise, we parse, passing also the file name.
     with input_path.open() as fp:
         content = Parser(
-            fp, inline=inline, module_name=output_path.with_suffix("").name
+            fp, config=config, module_name=input_path.name
         ).parse()
 
     # And then we dump the parsed content.

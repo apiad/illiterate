@@ -5,9 +5,10 @@ from __future__ import annotations
 from email.generator import Generator
 
 import logging
-import math
 
 from importlib_metadata import collections
+
+from illiterate.config import IlliterateConfig
 
 logger = logging.getLogger("illiterate")
 
@@ -93,10 +94,11 @@ class Markdown(Block):
             line = self.fix_links(line.strip())
 
             if line.startswith("# "):
-                if (match := self.hl_re.search(line)):
-                    ref = match.group('ref')
+                if (match := self.hl_re.search(line)) :
+                    ref = match.group("ref")
                     block = content[ref]
                     block.print(fp, content)
+                    continue
 
                 fp.write(line[2:] + "\n")
             else:
@@ -150,9 +152,15 @@ class Python(Block):
 
         fp.write("\n".join(self.get_anchors()) + "\n\n")
 
-        highlights = f'hl_lines="{self.highlights}"' if self.highlights else ""
+        highlights = (
+            f' hl_lines="{self.highlights}"'
+            if self.highlights and content.config.highlights
+            else ""
+        )
+        title = f' title="{self.module_name}"' if content.config.title else ""
+        linenums = f' linenums="{self.lineno}"' if content.config.linenums else ""
 
-        fp.write(f'```python linenums="{self.lineno}" {highlights}\n')
+        fp.write(f"```python{linenums}{highlights}{title}\n")
 
         for line in self.content:
             fp.write(self.strip(line) + "\n")
@@ -205,8 +213,6 @@ class Python(Block):
             if (match := self.ref_re.search(line)) :
                 refs[match.group("ref")].append(i)
 
-                print(refs)
-
         return [
             Python(
                 name=key,
@@ -239,8 +245,9 @@ class Docstring(Block):
 
 
 class Content:
-    def __init__(self, content: List[Block]) -> None:
+    def __init__(self, content: List[Block], config: IlliterateConfig) -> None:
         self.content = content
+        self.config = config
         self._by_name = {block.name: block for block in content}
 
         for block in content:
@@ -268,9 +275,11 @@ class Content:
 
 
 class Parser:
-    def __init__(self, input_src: TextIO, inline: bool, module_name: str) -> None:
+    def __init__(
+        self, input_src: TextIO, module_name: str, config: IlliterateConfig
+    ) -> None:
         self.input_src = input_src
-        self.inline = inline
+        self.config = config
         self.module_name = module_name
         self.content = []
         self.state = State.Markdown
@@ -302,7 +311,7 @@ class Parser:
 
             elif self.state == State.Python:
                 if line.startswith("#") or (
-                    self.inline and line.strip().startswith("#")
+                    self.config.inline and line.strip().startswith("#")
                 ):
                     current = self.store(current)
                     self.state = State.Markdown
@@ -316,7 +325,7 @@ class Parser:
                     self.state = State.Docstring
                 elif not (
                     line.startswith("#")
-                    or (self.inline and line.strip().startswith("#"))
+                    or (self.config.inline and line.strip().startswith("#"))
                 ):
                     current = self.store(current)
                     self.state = State.Python
@@ -325,7 +334,7 @@ class Parser:
 
         self.store(current)
 
-        return Content(self.content)
+        return Content(self.content, self.config)
 
     # This small utility function creates the actual `Block` instance.
     # We make return an empty list so that we can use it as shown before,

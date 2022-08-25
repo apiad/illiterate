@@ -11,24 +11,68 @@ with three commands, that manage the whole process.
 # and documentation.
 
 
-import time
-from illiterate.config import IlliterateConfig
 import typer
 import yaml
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileModifiedEvent
-from . import process
 
-# The main typer application
+# These two are for watching file changes.
+
+from watchdog.events import FileModifiedEvent, FileSystemEventHandler
+from watchdog.observers import Observer
+
+# And these are internal.
+
+from illiterate import process
+from illiterate.config import IlliterateConfig
+
+# The main typer application.
 app = typer.Typer()
 
 # These are the types for our arguments, and `shutil` for copying files.
 
 from pathlib import Path
 from typing import List
-import logging
-from rich.logging import RichHandler
+
 from rich.progress import track
+
+# ## A command helper
+
+# Most of the commands will take either CLI args or a --config file.
+# So we will define a decorator now to take care of that bookkeeping and
+# obtain an instance of `IlliterateConfig`.
+
+
+def illiterate_command(fn):
+    def command(
+        src: List[str] = typer.Option([]),
+        inline: bool = False,
+        linenums: bool = False,
+        highlights: bool = False,
+        title: bool = False,
+        expanded: bool = False,
+        config: Path = None,
+    ):
+        if config:
+            with config.open() as fp:
+                cfg = IlliterateConfig(**yaml.safe_load(fp))
+        elif not src and Path("illiterate.yml").exists():
+            with open("illiterate.yml") as fp:
+                cfg = IlliterateConfig(**yaml.safe_load(fp))
+        else:
+            if not src:
+                typer.echo("At least one source or a config file must be provided.")
+                raise typer.Exit(1)
+
+            cfg = IlliterateConfig.make(
+                sources=src, inline=inline, linenums=linenums, highlights=highlights, title=title
+            )
+
+        if expanded:
+            cfg = cfg.expanded()
+
+        return fn(cfg)
+
+    return command
+
 
 # ## The build command
 
@@ -37,67 +81,51 @@ from rich.progress import track
 # This command parse and creates the documentation based on its input parameters.
 
 
-@app.command()
-def build(
-    sources: List[str] = None,
-    debug: bool = False,
-    inline: bool = False,
-    *,
-    config: Path = None
-):
-    level = logging.DEBUG if debug else logging.WARNING
-
-    logging.basicConfig(level=level, handlers=[RichHandler(rich_tracebacks=True)])
-
-    if config:
-        with config.open() as fp:
-            cfg = IlliterateConfig(**yaml.safe_load(fp))
-    else:
-        cfg = IlliterateConfig.make(inline=inline, sources=sources)
-
-    process_all(cfg)
+@app.command("build")
+@illiterate_command
+def build(config: IlliterateConfig):
+    process_all(config)
 
 
-@app.command()
-def config(
-    sources: List[str], inline: bool = False, *, expand:bool=False
-):
-    cfg = IlliterateConfig.make(inline=inline, sources=sources)
+# ## The config command
 
-    if expand:
-        cfg = cfg.expanded()
 
-    print(yaml.safe_dump(cfg.dict()))
+@app.command("config")
+@illiterate_command
+def config(config: IlliterateConfig):
+    print(yaml.safe_dump(config.dict()))
 
 
 class IlliterateHandler(FileSystemEventHandler):
-    def __init__(self, input_path:Path, output_path:Path, cfg:IlliterateConfig) -> None:
+    def __init__(
+        self, input_path: Path, output_path: Path, cfg: IlliterateConfig
+    ) -> None:
         super().__init__()
         self.cfg = cfg
         self.input_path = input_path
         self.output_path = output_path
 
-    def on_modified(self, event:FileModifiedEvent):
+    def on_modified(self, event: FileModifiedEvent):
         typer.echo(f"Recreating: {self.input_path} -> {self.output_path}")
-        process(self.input_path, self.output_path, self.cfg.inline)
+        process(self.input_path, self.output_path, self.cfg)
 
 
-@app.command()
-def watch(sources: List[str]=None, inline: bool = False, *, config:Path=None):
-    if config:
-        with config.open() as fp:
-            cfg = IlliterateConfig(**yaml.safe_load(fp))
-    else:
-        cfg = IlliterateConfig.make(inline=inline, sources=sources)
-
-    process_all(cfg)
+@app.command("watch")
+@illiterate_command
+def watch(config: IlliterateConfig):
+    process_all(config)
     observer = Observer()
 
-    for input_path, output_path in cfg.files():
-        observer.schedule(IlliterateHandler(input_path, output_path, cfg), input_path)
+    for input_path, output_path in config.files():
+        observer.schedule(
+            IlliterateHandler(input_path, output_path, config), input_path
+        )
 
     observer.start()
     observer.join()
+
+
+# ## Processing a config file
 
 
 def process_all(cfg: IlliterateConfig):
@@ -105,4 +133,4 @@ def process_all(cfg: IlliterateConfig):
 
     # This function does all the heavy-lifting...
     for input_path, output_path in track(files):
-        process(input_path, output_path, cfg.inline)
+        process(input_path, output_path, cfg)
