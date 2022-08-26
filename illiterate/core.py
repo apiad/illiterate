@@ -161,7 +161,17 @@ class Python(Block):
             )
 
     def print(self, fp: TextIO, content: Content):
-        if not self.content:
+        lines = []
+
+        for line in self.content:
+            if ":hide:" in line:
+                continue
+            if ":skip:" in line:
+                break
+
+            lines.append(line)
+
+        if not lines:
             return
 
         fp.write("\n".join(self.get_anchors()) + "\n\n")
@@ -176,7 +186,7 @@ class Python(Block):
 
         fp.write(f"```python{linenums}{highlights}{title}\n")
 
-        for line in self.content:
+        for line in lines:
             fp.write(self.strip(line) + "\n")
 
         fp.write("```\n\n")
