@@ -331,19 +331,44 @@ class Parser:
 
         for line in self.input_src:
             if self.state == State.Docstring:
-                if line.strip().startswith('"""'):
+                # If we are in the Docstring node and 
+                # in the line there is the symbols to close it 
+                # We must parse the current content and 
+                # to change our state 
+                if '"""' in line: # It should matter if the closed symbol is down the text or at the end of the last line 
                     current = self.store(current)
                     self.state = State.Markdown
 
             elif self.state == State.Python:
+                
                 if line.startswith("#") or (
                     self.config.inline and line.strip().startswith("#")
                 ):
                     current = self.store(current)
                     self.state = State.Markdown
+
                 elif line.strip().startswith('"""'):
                     current = self.store(current)
                     self.state = State.Docstring
+
+                elif len(re.findall(r'"""', line)) == 1:
+                    self.state = State.PythonWithDocstring
+
+            elif self.state == State.PythonWithDocstring:
+                # A docstring is only a string block that they don't matter
+                # for the logic of program. But we can also use the syntax """...."""
+                # to define some important strings into our program.
+                # So, to detect when is a docstring or no we need a new state 
+
+                if line.startswith("#") or (
+                    self.config.inline and line.strip().startswith("#")
+                ):  
+                    self.state = State.Python
+                    current = self.store(current)
+                    self.state = State.Markdown
+                    
+                elif len(re.findall(r'"""', line)) == 1:
+                    self.state = State.Python
 
             elif self.state == State.Markdown:
                 if line.strip().startswith('"""'):
@@ -393,6 +418,7 @@ class State(enum.Enum):
     Markdown = 1
     Docstring = 2
     Python = 3
+    PythonWithDocstring = 4
 
 
 # And this is it 🖖.
