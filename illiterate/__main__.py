@@ -1,10 +1,23 @@
-# This module simply allows calling illiterate as
-# `python -m illiterate`.
-# We just import the CLI app and setup the right name so
-# that documentation is correct.
+import argparse
+from . import Tangle
 
-from .cli import app
+
+parser = argparse.ArgumentParser("illiterate")
+parser.add_argument("src_path")
+parser.add_argument("dst_path")
+parser.add_argument("--formats", nargs="*", default=["md", "qmd", "txt"])
+parser.add_argument("--delimiter", default="```")
+parser.add_argument("--directives", default="#:")
 
 
 if __name__ == "__main__":
-    app(prog_name="python -m illiterate")
+    args = parser.parse_args()
+    tangle = Tangle(
+        args.src_path,
+        args.dst_path,
+        formats=args.formats,
+        delimiter=args.delimiter,
+        directives=args.directives,
+    )
+
+    tangle.tangle()

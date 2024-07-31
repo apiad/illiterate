@@ -1,29 +1,17 @@
 [tool.poetry]
 name = "illiterate"
-version = "0.5.0"
-description = "Unobtrusive literate programming experience for Python pragmatists"
-authors = ["Alejandro Piad <alepiad@gmail.com>"]
+version = "1.00"
+description = "Yet another literate programming preprocessor"
+authors = ["Alejandro Piad-Morffis <apiad@apiad.net>"]
 license = "MIT"
-readme = "Readme.md"
-
-[tool.poetry.scripts]
-illiterate = "illiterate.cli:app"
+readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
-typer = "^0.3.2"
-rich = "^9.0.1"
-PyYAML = "5.4.1"
-pydantic = "^1.9.2"
-watchdog = "^2.1.9"
+python = "^3.12"
 
-[tool.poetry.dev-dependencies]
-pytest = "^5.4.1"
-mkdocs = "^1.1"
-coverage = "^5.0.3"
-black = "^19.10b0"
-mkdocs-material = "^5.5.12"
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.2"
 
 [build-system]
-requires = ["poetry>=1.0"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
