@@ -43,8 +43,7 @@ class Chunk:
                 arg, value = line[len(directives) :].strip().split("=")
                 args[arg] = value
             else:
-                if line.strip():
-                    content.append(line)
+                content.append(line)
 
         return cls("".join(content).strip("\n"), **args)
 
@@ -86,9 +85,8 @@ class Tangle:
 
         for src, chunks in graph.sort():
             with open(self.dst_path / src, "w") as fp:
-                for chunk in chunks:
-                    fp.write(chunk)
-                    fp.write("\n\n")
+                fp.write("\n\n".join(chunks))
+                fp.write("\n")
 
     def _collect(self) -> list[Chunk]:
         files: list[Path] = []

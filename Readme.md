@@ -25,18 +25,42 @@ The best way to see this in action is to use it, so the rest of this document wi
 
 The first thing literate programming in action.
 
+
+### Command-line interface
+
+To make `illiterate` work as a command-line application, we add the following at `__main__.py`. This is just instantiating the `Tangle` class with appropriate parameters.
+
 ```python
-#: source=example.py
+#: source=__main__.py
 
-print("Hello World")
+import argparse
+from . import Tangle
 
-<<< rest-of-program >>>
+<<< argparse-configuration >>>
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+    tangle = Tangle(
+        args.src_path,
+        args.dst_path,
+        formats=args.formats,
+        delimiter=args.delimiter,
+        directives=args.directives,
+    )
+
+    tangle.tangle()
 ```
 
-Here is a test
+The parameters are taken from the command-line using the `argparse` standard module.
+
 
 ```python
-#: id=rest-of-program
+#: id=argparse-configuration
 
-print("Another part")
+parser = argparse.ArgumentParser("illiterate")
+parser.add_argument("src_path")
+parser.add_argument("dst_path")
+parser.add_argument("--formats", nargs="*", default=["md", "qmd", "txt"])
+parser.add_argument("--delimiter", default="```")
+parser.add_argument("--directives", default="#:")
 ```
