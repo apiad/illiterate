@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 pulldown-cmark = "0.13.0"
+regex = "1.11.1"
