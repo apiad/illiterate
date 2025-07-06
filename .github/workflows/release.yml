@@ -1,0 +1,72 @@
+# .github/workflows/release.yml
+
+name: Release Illiterate (Linux)
+
+# This workflow runs when a new tag is pushed that starts with "v"
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  # This job creates the GitHub Release entry
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Linux binary release. See CHANGELOG.md for details.
+          draft: false
+          prerelease: false
+
+  # This job builds and uploads the single Linux binary
+  build-and-upload:
+    name: Build and Upload Linux Binary
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      - name: Build static Linux binary
+        run: cargo build --release --target x86_64-unknown-linux-musl
+        env:
+          RUSTFLAGS: -C target-feature=+crt-static
+
+      - name: Package binary for release
+        run: |
+          # Create a directory for packaging
+          mkdir -p staging
+          # Copy the binary, README, and LICENSE
+          cp target/x86_64-unknown-linux-musl/release/illiterate staging/
+          cp README.md staging/
+          cp LICENSE staging/
+          # Create the tarball
+          cd staging
+          tar -czvf ../illiterate-${{ github.ref_name }}-linux-x86_64.tar.gz *
+          cd ..
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./illiterate-${{ github.ref_name }}-linux-x86_64.tar.gz
+          asset_name: illiterate-${{ github.ref_name }}-linux-x86_64.tar.gz
+          asset_content_type: application/gzip
