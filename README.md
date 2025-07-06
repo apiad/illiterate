@@ -154,20 +154,39 @@ This project is self-hosting! The source code for illiterate lives in illiterate
 The workflow for contributors is simple:
 
 1. **Clone the repository:**
-   git clone [https://github.com/apiad/illiterate.git](https://github.com/apiad/illiterate.git)
-   cd illiterate
+
+```bash
+git clone [https://github.com/apiad/illiterate.git](https://github.com/apiad/illiterate.git)
+cd illiterate
+```
+
 2. **Build the initial version:** The src/ directory contains pre-exported source code, so you can build it immediately.
-   cargo build
-   This creates a binary at target/debug/illiterate.
-3. **Make your changes:** Edit the "source of truth" file, illiterate.md.
-4. **Re-export the source code:** Use the binary you just built to update the src/ directory with your changes.
-   ./target/debug/illiterate illiterate.md
+
+```bash
+cargo build
+```
+
+This creates a binary at `target/debug/illiterate`.
+
+3. **Make your changes:** Edit the "source of truth" file, `illiterate.md`.
+
+4. **Re-export the source code:** Use the binary you just built to update the `src/` directory with your changes.
+
+```bash
+./target/debug/illiterate illiterate.md
+```
+
 5. **Re-build your changes:**
-   cargo build
 
-You can verify that your generated code is correctly checked in by running the --dry-run command. This should exit successfully before you commit.
+```bash
+cargo build
+```
 
+You can verify that your generated code is correctly checked in by running the `--dry-run` command. This should exit successfully before you commit.
+
+```bash
 ./target/debug/illiterate --dry-run illiterate.md
+```
 
 ## License
 
