@@ -13,16 +13,16 @@ A fast, zero-config, programmer-first literate programming tool. illiterate expo
 
 illiterate is distributed as a single static binary for Linux (and Windows Subsystem for Linux).
 
-You can install it by downloading the latest pre-compiled binary from the [GitHub Releases page](https://www.google.com/search?q=https://github.com/YOUR_USERNAME/illiterate/releases/latest) and placing it in a directory on your PATH.
+You can install it by downloading the latest pre-compiled binary from the [GitHub Releases page](https://www.google.com/search?q=https://github.com/apiad/illiterate/releases/latest) and placing it in a directory on your PATH.
 
 Here are the commands to install the latest version directly into /usr/local/bin:
 
 ```bash
 # Fetch the latest release version tag (e.g., v0.1.0)
-LATEST_RELEASE=$(curl -s "https://api.github.com/repos/YOUR_USERNAME/illiterate/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/1/')
+LATEST_RELEASE=$(curl -s "https://api.github.com/repos/apiad/illiterate/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/1/')
 
 # Construct the download URL for the Linux binary
-DOWNLOAD_URL="https://github.com/YOUR_USERNAME/illiterate/releases/download/${LATEST_RELEASE}/illiterate-${LATEST_RELEASE}-linux-x86_64.tar.gz"
+DOWNLOAD_URL="https://github.com/apiad/illiterate/releases/download/${LATEST_RELEASE}/illiterate-${LATEST_RELEASE}-linux-x86_64.tar.gz"
 
 # Download and extract the binary into /usr/local/bin
 # This may require sudo if you don't have write permissions to the target directory.
@@ -154,7 +154,7 @@ This project is self-hosting! The source code for illiterate lives in illiterate
 The workflow for contributors is simple:
 
 1. **Clone the repository:**
-   git clone [https://github.com/YOUR_USERNAME/illiterate.git](https://github.com/YOUR_USERNAME/illiterate.git)
+   git clone [https://github.com/apiad/illiterate.git](https://github.com/apiad/illiterate.git)
    cd illiterate
 2. **Build the initial version:** The src/ directory contains pre-exported source code, so you can build it immediately.
    cargo build
