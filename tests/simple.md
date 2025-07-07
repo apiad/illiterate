@@ -2,7 +2,7 @@
 
 Here is a simple chunk of code.
 
-```rust
+```rust {export}
 fn main() {
     println!("Hello, world!");
 }

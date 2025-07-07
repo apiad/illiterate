@@ -2,16 +2,15 @@
 
 This example has two chunks.
 
-```rust {extract=main.rs}
+```python {name=hello_world}
+print("Hello World")
+```
+And a second chunk in another language:
+
+```rust {export=main.rs}
 fn main() {
     // A first chunk
 }
-```
-
-And a second chunk in another language:
-
-```python {name=hello_world}
-print("Hello World")
 ```
 
 Let's see how this goes.

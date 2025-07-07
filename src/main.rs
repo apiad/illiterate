@@ -2,22 +2,14 @@ use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag};
 use regex::Regex;
 
 
-/// Holds the parsed information from a code block's info string.
-/// `headless_export` is true if `{export}` is found.
-/// `export` is Some(path) if `{export=path}` is found.
 #[derive(Debug, PartialEq, Clone)]
 struct ChunkInfo {
     lang: String,
-    export: Option<String>,
+    path: Option<String>,
     name: Option<String>,
-    headless: bool,
+    export: bool,
 }
 
-/// Parses a fenced code block's info string (e.g., "rust {export=main.rs} {name=chunk_1}")
-/// using a regular expression with named capture groups.
-///
-/// It returns an `Option<ChunkInfo>` which is `Some` on a successful parse
-/// and `None` if the string doesn't match the expected format.
 fn parse_info_string(info_string: &str) -> Option<ChunkInfo> {
     // First, capture the language and the rest of the attributes string.
     let lang_re = Regex::new(r"^\s*(?P<lang>\w+)\s*(?P<attrs>.*)$").unwrap();
@@ -28,12 +20,11 @@ fn parse_info_string(info_string: &str) -> Option<ChunkInfo> {
     let attrs_str = caps.name("attrs").unwrap().as_str();
 
     // This regex finds all attributes, handling both `{key=value}` and `{key}` formats.
-    // The `(?:=(?P<value>[^}]+))?` part makes the `=value` optional.
-    let attr_re = Regex::new(r"\{(?P<key>\w+)(?:=(?P<value>[^}]+))?\}").unwrap();
+    let attr_re = Regex::new(r"\{(?P<key>[a-zA-Z\d_]+)(=(?P<value>[^}]+))?\}").unwrap();
 
-    let mut export = None;
+    let mut path = None;
     let mut name = None;
-    let mut headless = false;
+    let mut export = false;
 
     // Iterate over all attribute matches found in the string.
     for attr_caps in attr_re.captures_iter(attrs_str) {
@@ -43,12 +34,10 @@ fn parse_info_string(info_string: &str) -> Option<ChunkInfo> {
 
         match key {
             "export" => {
+                export = true;
                 if let Some(val_match) = value {
                     // This was {export=...}, so we have a path.
-                    export = Some(val_match.as_str().to_string());
-                } else {
-                    // This was {export}, the headless version.
-                    headless = true;
+                    path = Some(val_match.as_str().to_string());
                 }
             }
             "name" => {
@@ -61,13 +50,18 @@ fn parse_info_string(info_string: &str) -> Option<ChunkInfo> {
         }
     }
 
+    if path.is_none() && name.is_none() && !export {
+        return None;
+    }
+
     return Some(ChunkInfo {
         lang: lang,
-        export: export,
+        path,
         name: name,
-        headless: headless,
+        export,
     })
 }
+
 
 #[derive(Debug, PartialEq)]
 struct Chunk {
@@ -77,29 +71,38 @@ struct Chunk {
 
 fn extract_chunks(file_path: &str) -> Vec<Chunk> {
     let mut chunks = Vec::new();
-
-    // open file path
     let content = std::fs::read_to_string(file_path).unwrap();
     let parser = Parser::new(&content);
+    let mut in_chunk = false;
 
     for event in parser {
         match event {
             Event::Start(Tag::CodeBlock(kind)) => {
-                if let CodeBlockKind::Fenced(info) = kind {
-                    let chunk_info = parse_info_string(&info).unwrap();
-
-                    chunks.push(Chunk {
-                        info: chunk_info,
-                        content: String::new(),
-                    })
+                if let CodeBlockKind::Fenced(info_str) = kind {
+                    if let Some(info) = parse_info_string(&info_str) {
+                        chunks.push(Chunk {
+                            info,
+                            content: String::new(),
+                        });
+                        in_chunk = true;
+                    }
                 }
             }
-
+            Event::Text(text) => {
+                if in_chunk {
+                    if let Some(last_chunk) = chunks.last_mut() {
+                        last_chunk.content.push_str(&text);
+                    }
+                }
+            }
+            Event::End(_) => {
+                in_chunk = false;
+            }
             _ => {}
         }
     }
 
-    return chunks;
+    chunks
 }
 
 #[cfg(test)]
@@ -125,10 +128,12 @@ mod tests {
         assert!(chunks.len() == 2);
 
         let chunk0 = &chunks[0];
-        assert!(chunk0.info.lang == "rust");
+        assert!(chunk0.info.lang == "python");
+        assert!(chunk0.content == "print(\"Hello World\")\n");
 
         let chunk1 = &chunks[1];
-        assert!(chunk1.info.name.as_ref().unwrap() == "hello_world")
+        assert!(chunk1.info.lang == "rust");
+        assert!(chunk1.content == "fn main() {\n    // A first chunk\n}\n");
     }
 
     #[test]
@@ -136,9 +141,21 @@ mod tests {
         let info = "rust {export=src/main.rs} {name=chunk_1}";
         let expected = ChunkInfo {
             lang: "rust".to_string(),
-            export: Some("src/main.rs".to_string()),
+            path: Some("src/main.rs".to_string()),
             name: Some("chunk_1".to_string()),
-            headless: false,
+            export: true,
+        };
+        assert_eq!(parse_info_string(info), Some(expected));
+    }
+
+    #[test]
+    fn test_language_and_name() {
+        let info = "python {name=hello_world}";
+        let expected = ChunkInfo {
+            lang: "python".to_string(),
+            path: None,
+            name: Some("hello_world".to_string()),
+            export: false,
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
@@ -148,9 +165,9 @@ mod tests {
         let info = "rust {name=chunk_1} {export=src/main.rs}";
         let expected = ChunkInfo {
             lang: "rust".to_string(),
-            export: Some("src/main.rs".to_string()),
+            path: Some("src/main.rs".to_string()),
             name: Some("chunk_1".to_string()),
-            headless: false,
+            export: true,
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
@@ -158,13 +175,7 @@ mod tests {
     #[test]
     fn test_language_only() {
         let info = "python";
-        let expected = ChunkInfo {
-            lang: "python".to_string(),
-            export: None,
-            name: None,
-            headless: false,
-        };
-        assert_eq!(parse_info_string(info), Some(expected));
+        assert_eq!(parse_info_string(info), None);
     }
 
     #[test]
@@ -172,9 +183,9 @@ mod tests {
         let info = "javascript {export=app.js}";
         let expected = ChunkInfo {
             lang: "javascript".to_string(),
-            export: Some("app.js".to_string()),
+            path: Some("app.js".to_string()),
             name: None,
-            headless: false
+            export: true
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
@@ -184,9 +195,9 @@ mod tests {
         let info = "rust {export}";
         let expected = ChunkInfo {
             lang: "rust".to_string(),
-            export: None,
+            path: None,
             name: None,
-            headless: true,
+            export: true,
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
@@ -196,9 +207,9 @@ mod tests {
         let info = "rust {name=my_frag} {export}";
         let expected = ChunkInfo {
             lang: "rust".to_string(),
-            export: None,
+            path: None,
             name: Some("my_frag".to_string()),
-            headless: true
+            export: true
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
@@ -208,9 +219,9 @@ mod tests {
         let info = "rust {name=my_fragment}";
         let expected = ChunkInfo {
             lang: "rust".to_string(),
-            export: None,
+            path: None,
             name: Some("my_fragment".to_string()),
-            headless: false,
+            export: false,
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
@@ -220,9 +231,9 @@ mod tests {
         let info = "  bash   {export=run.sh}  ";
         let expected = ChunkInfo {
             lang: "bash".to_string(),
-            export: Some("run.sh".to_string()),
+            path: Some("run.sh".to_string()),
             name: None,
-            headless: false,
+            export: true,
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
