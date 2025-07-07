@@ -11,7 +11,7 @@ fn helper() {
 
 This is our main method:
 
-```rust {export=complex_references.rs}
+```rust {export}
 fn main() {
     <<main_content>>
     helper();

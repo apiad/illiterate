@@ -1,10 +1,54 @@
-use std::{collections::HashMap, env, fs::{self, OpenOptions}, io::Write, path::{Path, PathBuf}};
+use std::{
+    collections::HashMap,
+    env,
+    fs::{self, OpenOptions},
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use pulldown_cmark::{CodeBlockKind, Event, Parser as MarkdownParser, Tag};
 use regex::Regex;
 
-
 use clap::Parser;
+
+
+/// A lazily-initialized, static HashMap of programming languages and their default file extensions.
+fn language_extensions() -> HashMap<&'static str, &'static str> {
+    let mut map = HashMap::new();
+
+    map.insert("python", "py");
+    map.insert("javascript", "js");
+    map.insert("java", "java");
+    map.insert("csharp", "cs");
+    map.insert("cpp", "cpp");
+    map.insert("c", "c");
+    map.insert("typescript", "ts");
+    map.insert("php", "php");
+    map.insert("swift", "swift");
+    map.insert("ruby", "rb");
+    map.insert("go", "go");
+    map.insert("kotlin", "kt");
+    map.insert("rust", "rs");
+    map.insert("r", "r");
+    map.insert("matlab", "m");
+    map.insert("perl", "pl");
+    map.insert("scala", "scala");
+    map.insert("objc", "m");
+    map.insert("lua", "lua");
+    map.insert("dart", "dart");
+    map.insert("haskell", "hs");
+    map.insert("groovy", "groovy");
+    map.insert("elixir", "ex");
+    map.insert("julia", "jl");
+    map.insert("fsharp", "fs");
+    map.insert("clojure", "clj");
+    map.insert("erlang", "erl");
+    map.insert("assembly", "asm");
+    map.insert("sql", "sql");
+    map.insert("bash", "sh");
+
+    return map;
+}
 
 /// A fast, zero-config, programmer-first literate programming tool.
 #[derive(Parser, Debug)]
@@ -18,7 +62,6 @@ struct Cli {
     #[arg(long, short, value_name = "DIRECTORY")]
     dir: Option<PathBuf>,
 }
-
 
 #[derive(Debug, PartialEq, Clone)]
 struct ChunkInfo {
@@ -86,7 +129,6 @@ struct Chunk {
     content: String,
 }
 
-
 impl Chunk {
     /// Public method to start the expansion process.
     /// It initializes the tracking stack for circular dependency checks.
@@ -104,7 +146,10 @@ impl Chunk {
         // Check for circular dependencies.
         if let Some(name) = &self.info.name {
             if expansion_stack.contains(name) {
-                let error_msg = format!("\n// ERROR: Circular reference detected for chunk '{}'\n", name);
+                let error_msg = format!(
+                    "\n// ERROR: Circular reference detected for chunk '{}'\n",
+                    name
+                );
                 return error_msg;
             }
             expansion_stack.push(name.clone());
@@ -135,10 +180,8 @@ impl Chunk {
                     None => {
                         // Handle missing chunk reference by inserting an error message.
                         final_content.push_str(indent_str);
-                        final_content.push_str(&format!(
-                            "// ERROR: Chunk '{}' not found",
-                            name_to_include
-                        ));
+                        final_content
+                            .push_str(&format!("// ERROR: Chunk '{}' not found", name_to_include));
                     }
                 }
             } else {
@@ -170,15 +213,24 @@ fn extract_chunks(file_path: &str) -> Vec<Chunk> {
     let parser = MarkdownParser::new(&content);
     let mut in_chunk = false;
 
+    let lang_ext = language_extensions();
+
     for event in parser {
         match event {
             Event::Start(Tag::CodeBlock(kind)) => {
                 if let CodeBlockKind::Fenced(info_str) = kind {
                     if let Some(info) = parse_info_string(&info_str) {
-                        chunks.push(Chunk {
+                        let mut chunk = Chunk {
                             info,
                             content: String::new(),
-                        });
+                        };
+
+                        if chunk.info.export && chunk.info.name.is_none() {
+                            let default_path = Path::new(file_path).with_extension(lang_ext[chunk.info.lang.as_str()]);
+                            chunk.info.path = Some(default_path.to_str().unwrap().to_string());
+                        }
+
+                        chunks.push(chunk);
                         in_chunk = true;
                     }
                 }
@@ -212,10 +264,7 @@ fn create_named_chunk_map(chunks: &[Chunk]) -> HashMap<String, &Chunk> {
 
 /// Processes a list of markdown file paths, extracts all code chunks,
 /// and organizes them into exportable chunks and a map of named chunks.
-fn process_markdown_files(
-    paths: Vec<PathBuf>,
-    root_dir: Option<PathBuf>,
-) {
+fn process_markdown_files(paths: Vec<PathBuf>, root_dir: Option<PathBuf>) {
     let mut chunks = Vec::new();
 
     for path in paths.iter() {
@@ -226,33 +275,33 @@ fn process_markdown_files(
     let named_chunks_map = create_named_chunk_map(&chunks);
 
     // Filter out the chunks that are marked for export.
-    let exportable_chunks = chunks
-        .iter()
-        .filter(|chunk| chunk.info.export);
+    let exportable_chunks = chunks.iter().filter(|chunk| chunk.info.export);
 
     for chunk in exportable_chunks {
         let content = chunk.expand(&named_chunks_map);
-        append_to_file(root_dir.as_ref(), chunk.info.path.as_ref().unwrap(), &content);
+        append_to_file(
+            root_dir.as_ref(),
+            chunk.info.path.as_ref().unwrap(),
+            &content,
+        );
     }
 }
 
 fn append_to_file(root_dir: Option<&PathBuf>, file_name: &str, content: &str) {
-    let dir_path =  match root_dir {
+    let dir_path = match root_dir {
         Some(path) => path,
         None => &env::current_dir().unwrap(),
     };
 
-    // 1. Create the root directory if it doesn't exist
-    fs::create_dir_all(&dir_path).expect("Cannot create directory.");
-
-    // 2. Construct the full file path
     let file_path = dir_path.join(file_name);
+    fs::create_dir_all(&file_path.parent().unwrap()).expect("Cannot create directory.");
 
     // 3. Open the file in append mode, creating it if it doesn't exist
     let mut file = OpenOptions::new()
         .append(true) // Set mode to append
         .create(true) // Create the file if it doesn't exist
-        .open(file_path).expect("Cannot open file.");
+        .open(&file_path)
+        .expect(&format!("Cannot open file {}.", file_path.display()));
 
     // 4. Write the content to the file
     write!(file, "{}", content).expect("Cannot write to file.");
@@ -435,8 +484,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_complex()
-    {
+    fn test_expand_complex() {
         let chunks = extract_chunks("tests/complex_references.md");
         let chunk_map = create_named_chunk_map(&chunks);
 
