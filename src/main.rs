@@ -1,7 +1,24 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, env, fs::{self, OpenOptions}, io::Write, path::{Path, PathBuf}};
 
-use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag};
+use pulldown_cmark::{CodeBlockKind, Event, Parser as MarkdownParser, Tag};
 use regex::Regex;
+
+
+use clap::Parser;
+
+/// A fast, zero-config, programmer-first literate programming tool.
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// One or more Markdown files to process
+    #[arg(required = true)]
+    files: Vec<PathBuf>,
+
+    /// Sets the root output directory for all exported files
+    #[arg(long, short, value_name = "DIRECTORY")]
+    dir: Option<PathBuf>,
+}
+
 
 #[derive(Debug, PartialEq, Clone)]
 struct ChunkInfo {
@@ -150,7 +167,7 @@ impl Chunk {
 fn extract_chunks(file_path: &str) -> Vec<Chunk> {
     let mut chunks = Vec::new();
     let content = std::fs::read_to_string(file_path).unwrap();
-    let parser = Parser::new(&content);
+    let parser = MarkdownParser::new(&content);
     let mut in_chunk = false;
 
     for event in parser {
@@ -191,6 +208,59 @@ fn create_named_chunk_map(chunks: &[Chunk]) -> HashMap<String, &Chunk> {
             chunk.info.name.as_ref().map(|name| (name.clone(), chunk))
         })
         .collect()
+}
+
+/// Processes a list of markdown file paths, extracts all code chunks,
+/// and organizes them into exportable chunks and a map of named chunks.
+fn process_markdown_files(
+    paths: Vec<PathBuf>,
+    root_dir: Option<PathBuf>,
+) {
+    let mut chunks = Vec::new();
+
+    for path in paths.iter() {
+        chunks.extend(extract_chunks(path.to_str().unwrap()));
+    }
+
+    // Create a map of all named chunks for easy lookup during expansion.
+    let named_chunks_map = create_named_chunk_map(&chunks);
+
+    // Filter out the chunks that are marked for export.
+    let exportable_chunks = chunks
+        .iter()
+        .filter(|chunk| chunk.info.export);
+
+    for chunk in exportable_chunks {
+        let content = chunk.expand(&named_chunks_map);
+        append_to_file(root_dir.as_ref(), chunk.info.path.as_ref().unwrap(), &content);
+    }
+}
+
+fn append_to_file(root_dir: Option<&PathBuf>, file_name: &str, content: &str) {
+    let dir_path =  match root_dir {
+        Some(path) => path,
+        None => &env::current_dir().unwrap(),
+    };
+
+    // 1. Create the root directory if it doesn't exist
+    fs::create_dir_all(&dir_path).expect("Cannot create directory.");
+
+    // 2. Construct the full file path
+    let file_path = dir_path.join(file_name);
+
+    // 3. Open the file in append mode, creating it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .append(true) // Set mode to append
+        .create(true) // Create the file if it doesn't exist
+        .open(file_path).expect("Cannot open file.");
+
+    // 4. Write the content to the file
+    write!(file, "{}", content).expect("Cannot write to file.");
+}
+
+fn main() {
+    let args = Cli::parse();
+    process_markdown_files(args.files, args.dir);
 }
 
 #[cfg(test)]
