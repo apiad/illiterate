@@ -137,6 +137,12 @@ mod tests {
     }
 
     #[test]
+    fn some_yes_some_no() {
+        let chunks = extract_chunks("tests/some_yes_some_no.md");
+        assert!(chunks.len() == 2);
+    }
+
+    #[test]
     fn test_full_string_parsing() {
         let info = "rust {export=src/main.rs} {name=chunk_1}";
         let expected = ChunkInfo {
