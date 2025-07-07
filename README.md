@@ -114,8 +114,6 @@ illiterate [OPTIONS] [FILES...]
 
 * **[FILES...]**: One or more Markdown files to process.
 * **--dir <DIRECTORY>**: Sets the root output directory for all exported files. Defaults to the current directory.
-* **-w, --watch**: Watches the input files for changes and automatically re-exports them.
-* **-d, --dry-run**: Checks if the on-disk source files are in sync with the Markdown. It will exit with an error if any files would be changed, but will not write any changes itself. This is ideal for CI checks.
 
 ## Roadmap
 
@@ -180,12 +178,6 @@ This creates a binary at `target/debug/illiterate`.
 
 ```bash
 cargo build
-```
-
-You can verify that your generated code is correctly checked in by running the `--dry-run` command. This should exit successfully before you commit.
-
-```bash
-./target/debug/illiterate --dry-run illiterate.md
 ```
 
 ## License
