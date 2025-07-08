@@ -107,6 +107,16 @@ illiterate [OPTIONS] [FILES...]
 * **[FILES...]**: One or more Markdown files to process.
 * **--dir <DIRECTORY>**: Sets the root output directory for all exported files. Defaults to the current directory.
 
+## Changelog
+
+### v0.2.0
+
+- First version with full support for named references and headless exporting.
+
+### v0.1.0
+
+- Basic markdown parsing and extraction of simple blocks.
+
 ## Roadmap
 
 Here are some of the planned features to make illiterate even more powerful. You are welcome to contribute to any of them!
