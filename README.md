@@ -61,11 +61,11 @@ fn main() {
 
 ## Core Concepts
 
-illiterate works by parsing special attributes inside your fenced code blocks.
+`illiterate` works by parsing special attributes inside your fenced code blocks.
 
 #### 1. Export Blocks ({export=...})
 
-A code block marked with {export=path/to/file.ext} will have its contents extracted and appended to the specified file. All blocks targeting the same file are concatenated in the order they appear.
+A code block marked with `{export=path/to/file.ext}` will have its contents extracted and appended to the specified file. All blocks targeting the same file are concatenated in the order they appear.
 
     ```python {export=app/main.py}
     import utils
@@ -73,7 +73,7 @@ A code block marked with {export=path/to/file.ext} will have its contents extrac
 
 #### 2. Named Fragments & Includes ({name=...} and <<...>>)
 
-A code block can be given a name with {name=my_fragment}. This block is not exported directly but can be included elsewhere using the <<my_fragment>> syntax. This allows you to explain code in logical chunks, out of order, and assemble it correctly later.
+A code block can be given a name with `{name=my_fragment}`. This block is not exported directly but can be included elsewhere using the `<<my_fragment>>` syntax. This allows you to explain code in logical chunks, out of order, and assemble it correctly later.
 
     ```rust {name=setup_database}
     // Logic to connect to the database...
@@ -88,7 +88,7 @@ A code block can be given a name with {name=my_fragment}. This block is not expo
 
 #### 3. "Magic" Headless Exporting ({export})
 
-For simple cases where one Markdown file corresponds to one source file, you can use a headless {export} attribute. illiterate will automatically generate the filename based on the Markdown file's name and the code block's language.
+For simple cases where one Markdown file corresponds to one source file, you can use a headless `{export}` attribute. illiterate will automatically generate the filename based on the Markdown file's name and the code block's language.
 
 Given a file named my_module.md:
 
@@ -110,6 +110,20 @@ illiterate [OPTIONS] [FILES...]
 ## Roadmap
 
 Here are some of the planned features to make illiterate even more powerful. You are welcome to contribute to any of them!
+
+#### Dry Mode
+
+A dry run mode that shows what files would be created and their contents without actually writing them to disk.
+
+* **Command:** `illiterate --dry [FILES...]`
+* **Functionality:** Outputs the list of files that would be created and their contents.
+
+#### Test Mode
+
+A test mode that compares the generated code with the existing content in disk. The command returns with zero if the generated code would be indentical to what's already on disk. Useful for CI/CD pipelines, or git commit hooks, to ensure your docs and source are always in sync.
+
+* **Command**: `illiterate -t [OPTIONS] [FILES...]`
+* **Functionality:** Returns zero if the generated code matches the existing files. If there are differences, it outputs the differences and returns non-zero.
 
 #### Architecture Visualization (--graph)
 
