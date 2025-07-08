@@ -18,7 +18,7 @@ You can install it by downloading the latest pre-compiled binary from the [GitHu
 Here are the commands to install the latest version directly into /usr/local/bin:
 
 ```bash
-curl https://github.com/apiad/illiterate/blob/main/install.sh | sh
+curl https://raw.githubusercontent.com/apiad/illiterate/refs/heads/main/install.sh | sh
 ```
 
 That's it! Run `illiterate --help` to get started.
