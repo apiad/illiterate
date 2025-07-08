@@ -11,11 +11,11 @@ A fast, zero-config, programmer-first literate programming tool. illiterate expo
 
 ## Installation
 
-illiterate is distributed as a single static binary for Linux (and Windows Subsystem for Linux).
+`illiterate` is distributed as a single static binary for Linux (and Windows Subsystem for Linux).
 
-You can install it by downloading the latest pre-compiled binary from the [GitHub Releases page](https://www.google.com/search?q=https://github.com/apiad/illiterate/releases/latest) and placing it in a directory on your PATH.
+You can install it by downloading the latest pre-compiled binary from the [GitHub Releases page](https://github.com/apiad/illiterate/releases/latest) and placing it in a directory on your PATH.
 
-Here are the commands to install the latest version directly into /usr/local/bin:
+The following command will install the latest version directly into `/usr/local/bin`:
 
 ```bash
 curl https://raw.githubusercontent.com/apiad/illiterate/refs/heads/main/install.sh | sh
@@ -115,25 +115,25 @@ Here are some of the planned features to make illiterate even more powerful. You
 
 A picture is worth a thousand lines of code. This feature will generate a visual map of your project's structure.
 
-* **Command:** illiterate --graph [FILES...]
+* **Command:** `illiterate --graph [FILES...]`
 * **Functionality:** Outputs a [Graphviz](https://graphviz.org/) dot language representation of the project. It will map the relationships between all {export=...} targets and the {name=...} fragments they include.
-* **Example:** illiterate --graph my_app.md | dot -Tpng > architecture.png
+* **Example:** `illiterate --graph my_app.md | dot -Tpng > architecture.png`
 
 #### Source Code Syncing (--update)
 
 This provides a "reverse export" to keep the Markdown source of truth synchronized with small, quick changes made directly to the generated code.
 
-* **Command:** illiterate -u, --update [FILES...]
+* **Command:** `illiterate -u, --update [FILES...]`
 * **Functionality:** illiterate will read the content of the on-disk source files. If a file differs from what *would have been* generated, this command will **update the corresponding code block in the Markdown file** to match the on-disk version. This is perfect for backporting quick fixes without manual copy-pasting.
 
 #### Code Editor Integration (LSP)
 
 To provide a seamless, real-time development experience, illiterate will function as a Language Server Protocol (LSP) server.
 
-* **Command:** illiterate lsp
+* **Command:** `illiterate --lsp`
 * **Functionality:** This command launches the LSP server. When used with a compatible editor plugin, it enables:
   * **Error Diagnostics:** Underlines includes of non-existent fragments.
-  * **Go to Definition:** F12 on <<my_fragment>> jumps to its definition.
+  * **Go to Definition:** F12 on `<<my_fragment>>` jumps to its definition.
   * **Completions:** Autocompletes fragment names as you type <<....
   * **Hover Information:** Shows a fragment's content when you hover over it.
 
@@ -146,7 +146,7 @@ The workflow for contributors is simple:
 1. **Clone the repository:**
 
 ```bash
-git clone [https://github.com/apiad/illiterate.git](https://github.com/apiad/illiterate.git)
+git clone https://github.com/apiad/illiterate.git
 cd illiterate
 ```
 
@@ -174,4 +174,4 @@ cargo build
 
 ## License
 
-illiterate is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+`illiterate` is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
