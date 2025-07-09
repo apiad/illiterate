@@ -106,8 +106,13 @@ illiterate [OPTIONS] [FILES...]
 
 * **[FILES...]**: One or more Markdown files to process.
 * **--dir <DIRECTORY>**: Sets the root output directory for all exported files. Defaults to the current directory.
+* **--test**: Tests the output against generated files, without generating anything. Exists with zero if the generated files would not change. Useful for CI/CD.
 
 ## Changelog
+
+### v0.3.0
+
+- Add flag `--test` to test the output against generated files.
 
 ### v0.2.0
 
@@ -127,13 +132,6 @@ A dry run mode that shows what files would be created and their contents without
 
 * **Command:** `illiterate --dry [FILES...]`
 * **Functionality:** Outputs the list of files that would be created and their contents.
-
-#### Test Mode
-
-A test mode that compares the generated code with the existing content in disk. The command returns with zero if the generated code would be indentical to what's already on disk. Useful for CI/CD pipelines, or git commit hooks, to ensure your docs and source are always in sync.
-
-* **Command**: `illiterate -t [OPTIONS] [FILES...]`
-* **Functionality:** Returns zero if the generated code matches the existing files. If there are differences, it outputs the differences and returns non-zero.
 
 #### Architecture Visualization (--graph)
 

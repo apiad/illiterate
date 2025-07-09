@@ -1,16 +1,13 @@
+use clap::Parser;
+use pulldown_cmark::{CodeBlockKind, Event, Parser as MarkdownParser, Tag};
+use regex::Regex;
 use std::{
     collections::HashMap,
     env,
-    fs::{self, OpenOptions},
-    io::Write,
+    fs::{self},
+    io,
     path::{Path, PathBuf},
 };
-
-use pulldown_cmark::{CodeBlockKind, Event, Parser as MarkdownParser, Tag};
-use regex::Regex;
-
-use clap::Parser;
-
 
 /// A lazily-initialized, static HashMap of programming languages and their default file extensions.
 fn language_extensions() -> HashMap<&'static str, &'static str> {
@@ -61,6 +58,11 @@ struct Cli {
     /// Sets the root output directory for all exported files
     #[arg(long, short, value_name = "DIRECTORY")]
     dir: Option<PathBuf>,
+
+    /// Run in test mode. Compares generated files with their
+    /// on-disk counterparts and reports differences.
+    #[arg(long, short)]
+    test: bool,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -225,9 +227,11 @@ fn extract_chunks(file_path: &str) -> Vec<Chunk> {
                             content: String::new(),
                         };
 
-                        if chunk.info.export && chunk.info.name.is_none() {
-                            let default_path = Path::new(file_path).with_extension(lang_ext[chunk.info.lang.as_str()]);
-                            chunk.info.path = Some(default_path.to_str().unwrap().to_string());
+                        if chunk.info.export && chunk.info.path.is_none() {
+                            let file_stem = Path::new(file_path).file_stem().unwrap().to_str().unwrap();
+                            let extension = lang_ext.get(chunk.info.lang.as_str()).unwrap_or(&"txt");
+                            let default_path = format!("{}.{}", file_stem, extension);
+                            chunk.info.path = Some(default_path);
                         }
 
                         chunks.push(chunk);
@@ -262,55 +266,119 @@ fn create_named_chunk_map(chunks: &[Chunk]) -> HashMap<String, &Chunk> {
         .collect()
 }
 
-/// Processes a list of markdown file paths, extracts all code chunks,
-/// and organizes them into exportable chunks and a map of named chunks.
-fn process_markdown_files(paths: Vec<PathBuf>, root_dir: Option<PathBuf>) {
-    let mut chunks = Vec::new();
+/// Processes a list of markdown files and builds an in-memory map of the
+/// files to be generated, without writing anything to disk.
+fn generate_output_map(
+    paths: &[PathBuf],
+    root_dir: Option<&PathBuf>,
+) -> HashMap<PathBuf, String> {
+    let mut all_chunks = Vec::new();
 
     for path in paths.iter() {
-        chunks.extend(extract_chunks(path.to_str().unwrap()));
+        all_chunks.extend(extract_chunks(path.to_str().unwrap()));
     }
 
     // Create a map of all named chunks for easy lookup during expansion.
-    let named_chunks_map = create_named_chunk_map(&chunks);
+    let named_chunks_map = create_named_chunk_map(&all_chunks);
 
     // Filter out the chunks that are marked for export.
-    let exportable_chunks = chunks.iter().filter(|chunk| chunk.info.export);
+    let exportable_chunks = all_chunks.iter().filter(|chunk| chunk.info.export);
+
+    // This map will hold the final content for each output file.
+    let mut output_file_contents: HashMap<PathBuf, String> = HashMap::new();
+    let base_dir = root_dir
+        .cloned()
+        .unwrap_or_else(|| env::current_dir().unwrap());
 
     for chunk in exportable_chunks {
         let content = chunk.expand(&named_chunks_map);
-        append_to_file(
-            root_dir.as_ref(),
-            chunk.info.path.as_ref().unwrap(),
-            &content,
-        );
+        // We can unwrap path because the extract_chunks logic now guarantees a path for exported chunks.
+        let file_path = base_dir.join(chunk.info.path.as_ref().unwrap());
+
+        // Append the expanded content of the current chunk to the appropriate file's content in the map.
+        output_file_contents
+            .entry(file_path)
+            .or_default()
+            .push_str(&content);
     }
+
+    output_file_contents
 }
 
-fn append_to_file(root_dir: Option<&PathBuf>, file_name: &str, content: &str) {
-    let dir_path = match root_dir {
-        Some(path) => path,
-        None => &env::current_dir().unwrap(),
-    };
+/// Writes the in-memory file map to the disk, overwriting existing files.
+fn write_output_to_disk(output_map: &HashMap<PathBuf, String>) -> io::Result<()> {
+    for (path, content) in output_map {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, content)?;
+    }
+    Ok(())
+}
 
-    let file_path = dir_path.join(file_name);
-    fs::create_dir_all(&file_path.parent().unwrap()).expect("Cannot create directory.");
+/// Compares the in-memory file map with files on disk and reports differences.
+fn run_test_comparison(output_map: &HashMap<PathBuf, String>) -> bool {
+    let mut differences = Vec::new();
 
-    // 3. Open the file in append mode, creating it if it doesn't exist
-    let mut file = OpenOptions::new()
-        .append(true) // Set mode to append
-        .create(true) // Create the file if it doesn't exist
-        .open(&file_path)
-        .expect(&format!("Cannot open file {}.", file_path.display()));
+    for (path, generated_content) in output_map {
+        match fs::read_to_string(path) {
+            Ok(disk_content) => {
+                if &disk_content != generated_content {
+                    differences.push(format!("Content mismatch in {}", path.display()));
+                }
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                differences.push(format!("Missing expected file on disk: {}", path.display()));
+            }
+            Err(e) => {
+                differences.push(format!(
+                    "Could not read file {}: {}",
+                    path.display(),
+                    e
+                ));
+            }
+        }
+    }
 
-    // 4. Write the content to the file
-    write!(file, "{}", content).expect("Cannot write to file.");
+    // Also check for any files on disk that shouldn't be there (optional but good practice)
+    // For now, we'll stick to the core requirement.
+
+    if differences.is_empty() {
+        println!("✅ All {} generated files are in sync with the disk.", output_map.len());
+        true
+    } else {
+        println!("❌ Found {} differences:", differences.len());
+        for diff in differences {
+            println!("  - {}", diff);
+        }
+        false
+    }
 }
 
 fn main() {
     let args = Cli::parse();
-    process_markdown_files(args.files, args.dir);
+
+    // 1. Generate the complete output in memory
+    let output_map = generate_output_map(&args.files, args.dir.as_ref());
+
+    if args.test {
+        // 2a. Run the test logic
+        if !run_test_comparison(&output_map) {
+            // Exit with a non-zero code to indicate test failure
+            std::process::exit(1);
+        }
+    } else {
+        // 2b. Run the file writing logic
+        match write_output_to_disk(&output_map) {
+            Ok(_) => println!("✅ Successfully exported {} file(s).", output_map.len()),
+            Err(e) => {
+                eprintln!("🔥 Error writing files to disk: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -325,6 +393,7 @@ mod tests {
 
         let chunk0 = &chunks[0];
         assert!(chunk0.info.lang == "rust");
+        assert_eq!(chunk0.info.path, Some("simple.rs".to_string()));
     }
 
     #[test]
@@ -337,10 +406,12 @@ mod tests {
         let chunk0 = &chunks[0];
         assert!(chunk0.info.lang == "python");
         assert!(chunk0.content == "print(\"Hello World\")\n");
+        assert_eq!(chunk0.info.name, Some("hello_world".to_string()));
 
         let chunk1 = &chunks[1];
         assert!(chunk1.info.lang == "rust");
         assert!(chunk1.content == "fn main() {\n    // A first chunk\n}\n");
+        assert_eq!(chunk1.info.path, Some("main.rs".to_string()));
     }
 
     #[test]
@@ -477,10 +548,11 @@ mod tests {
         let chunks = extract_chunks("tests/references.md");
         let chunk_map = create_named_chunk_map(&chunks);
 
-        let chunk0 = &chunks[0];
-        let expanded = chunk0.expand(&chunk_map);
+        // The exportable chunk is the first one
+        let main_chunk = chunks.iter().find(|c| c.info.export).unwrap();
+        let expanded = main_chunk.expand(&chunk_map);
 
-        assert!(expanded == "fn main() {\n    println!(\"Hello World\");\n}");
+        assert_eq!(expanded, "fn main() {\n    println!(\"Hello World\");\n}");
     }
 
     #[test]
@@ -488,7 +560,7 @@ mod tests {
         let chunks = extract_chunks("tests/complex_references.md");
         let chunk_map = create_named_chunk_map(&chunks);
 
-        let main_chunk = &chunks[1];
+        let main_chunk = chunks.iter().find(|c| c.info.name == Some("helper".to_string())).unwrap();
         let content = main_chunk.expand(&chunk_map);
 
         assert!(content.contains("let a = 0;"));
