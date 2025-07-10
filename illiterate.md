@@ -1,17 +1,72 @@
-// All necessary packages
-use clap::Parser;
-use pulldown_cmark::{CodeBlockKind, Event, Parser as MarkdownParser, Tag};
-use regex::Regex;
-use std::{
-    collections::HashMap,
-    env,
-    fs::{self},
-    io,
-    path::{Path, PathBuf},
-};
+# Illiterate
 
+`illiterate` is a tool to enable literate programming.
+It extracts code from Markdown files and exports it to source files.
+
+The core of `illiterate` is a simple parser that reads Markdown files and extracts code blocks, building a web of interconnected chunks that reference other chunks.
+
+Here is the main loop. First we parse the command line arguments, then we generate the complete output map (that contains all parsed chunks and relations), and finally we either run the test logic or the file writing logic.
+
+```rust {export=main.rs}
+// All necessary packages
+<<packages>>
 
 // Utility methods
+<<utilities>>
+
+fn main() {
+    let args = Cli::parse();
+
+    // 1. Generate the complete output in memory
+    let output_map = generate_output_map(&args.files, args.dir.as_ref());
+
+    if args.test {
+        // 2a. Run the test logic
+        <<test_source>>
+    } else {
+        // 2b. Run the file writing logic
+        <<generate_source>>
+    }
+}
+
+// Lots and lots of unit tests
+<<tests>>
+```
+
+The comparison logic is quite simple. We just compare the output map with the expected output map. This will print all differences between the two maps and exit with a non-zero output if there is any difference.
+
+```rust {name=test_source}
+if !run_test_comparison(&output_map) {
+    // Exit with a non-zero code to indicate test failure
+    std::process::exit(1);
+}
+```
+
+The writing logic is also quite simple. We just write all files to disk and print a success message. If there is an error, we print an error message and exit with a non-zero output.
+
+```rust {name=generate_source}
+match write_output_to_disk(&output_map) {
+    Ok(_) => println!("✅ Successfully exported {} file(s).", output_map.len()),
+    Err(e) => {
+        eprintln!("🔥 Error writing files to disk: {}", e);
+        std::process::exit(1);
+    }
+}
+```
+
+Now let's get into the meat of the logic.
+
+## The CLI
+
+First, let's build the command line interface. We will use the `clap` crate for this. First, we need to include it in the packages.
+
+```rust {name=packages}
+use clap::Parser;
+```
+
+And then we define the `Cli` struct that represents the input. Here we are using Rust's powerful macro system to construct the CLI directly from type annotations.
+
+```rust {name=utilities}
 /// A fast, zero-config, programmer-first literate programming tool.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -29,6 +84,20 @@ struct Cli {
     #[arg(long, short)]
     test: bool,
 }
+```
+
+## The Main Loop
+
+The core functionality in `illiterate` can be split into two big tasks:
+
+1. building a map of all the code chunks in the input files, and;
+2. using that map to construct the output files.
+
+The first part is relatively straightforward. We will need a Markdown parser to read the input files, and a way to store the code chunks. The second part will be slightly more complicated because chunks can reference other chunks, so the expansion of a chunk into actual code requires a recursive traversal of the chunk graph.
+
+The top-level functionality that encapsulates all this process in the method `generate_output_map`. Let's take a look at the big picture, and then dive into the actual implementation.
+
+```rust {name=utilities}
 /// Processes a list of markdown files and builds an in-memory map of the
 /// files to be generated, without writing anything to disk.
 fn generate_output_map(
@@ -36,41 +105,82 @@ fn generate_output_map(
     root_dir: Option<&PathBuf>,
 ) -> HashMap<PathBuf, String> {
     // First, we'll store all raw chunks in this vector
-    let mut all_chunks = Vec::new();
-    
-    for path in paths.iter() {
-        all_chunks.extend(extract_chunks(path.to_str().unwrap()));
-    }
-
+    <<extract_all_chunks>>
 
     // Next, we create two data structures with all chunks
-    // A map of all named chunks for easy lookup during expansion.
-    let named_chunks_map = create_named_chunk_map(&all_chunks);
-    
-    // A list of the chunks that are marked for export.
-    let exportable_chunks = all_chunks.iter().filter(|chunk| chunk.info.export);
-
+    <<create_data_structures>>
 
     // And finally create the final sources
-    // This map will hold the final content for each output file.
-    let mut source_map: HashMap<PathBuf, String> = HashMap::new();
-    
-    // Define the base dir (or use default)
-    let base_dir = root_dir.cloned().unwrap_or_else(|| env::current_dir().unwrap());
-    
-    // Expand all exportable chunks and collect their content into the output map.
-    for chunk in exportable_chunks {
-        // This is the where the recursive magic happens
-        let content = chunk.expand(&named_chunks_map);
-        // This is the path to the file where the chunk should be written.
-        let file_path = base_dir.join(chunk.info.path.as_ref().unwrap());
-        // Append the expanded content of the current chunk to the appropriate file's content in the map.
-        source_map.entry(file_path).or_default().push_str(&content);
-    }
-
+    <<synthesize_sources>>
 
     return source_map;
 }
+```
+
+The process to extract all code chunks requires iterating over each input file, performing the extraction of chunks in that file, and collecting all chunks in a global vector. We will look at the `extract_chunks` function in short, which is where the core of the work happens.
+
+```rust {name=extract_all_chunks}
+let mut all_chunks = Vec::new();
+
+for path in paths.iter() {
+    all_chunks.extend(extract_chunks(path.to_str().unwrap()));
+}
+```
+
+Once we have all chunks, we need two data structures. The first is a hash-based map of all named chunks (those that have a `name` attribute). In this structure we will associated to a single name all the chunks declared with that name, so we can later expand them in sequence.
+
+The second structure is a simple list of all chunks that have an `export` directive, which will be processed also in sequence.
+
+```rust {name=create_data_structures}
+// A map of all named chunks for easy lookup during expansion.
+let named_chunks_map = create_named_chunk_map(&all_chunks);
+
+// A list of the chunks that are marked for export.
+let exportable_chunks = all_chunks.iter().filter(|chunk| chunk.info.export);
+```
+
+The final part is to synthesize the tangled source files. This is done by iterating over all exportable chunks and expanding them. The expanded content is then appended to the appropriate file's content in the map. This creates an in-memory representation of the tangled source, that will later be either compared to filesystem source files (if `--test` is passed) or written to disk.
+
+```rust {name=synthesize_sources}
+// This map will hold the final content for each output file.
+let mut source_map: HashMap<PathBuf, String> = HashMap::new();
+
+// Define the base dir (or use default)
+let base_dir = root_dir.cloned().unwrap_or_else(|| env::current_dir().unwrap());
+
+// Expand all exportable chunks and collect their content into the output map.
+for chunk in exportable_chunks {
+    // This is the where the recursive magic happens
+    let content = chunk.expand(&named_chunks_map);
+    // This is the path to the file where the chunk should be written.
+    let file_path = base_dir.join(chunk.info.path.as_ref().unwrap());
+    // Append the expanded content of the current chunk to the appropriate file's content in the map.
+    source_map.entry(file_path).or_default().push_str(&content);
+}
+```
+
+Now that we have the big picture ready, let's take a look at the specifics.
+
+## Extracting chunks
+
+The first step in `illiterate` is to find all code chunks and build the two data structures explained before.
+
+## Reference source
+
+
+```rust {name=packages}
+use pulldown_cmark::{CodeBlockKind, Event, Parser as MarkdownParser, Tag};
+use regex::Regex;
+use std::{
+    collections::HashMap,
+    env,
+    fs::{self},
+    io,
+    path::{Path, PathBuf},
+};
+```
+
+```rust {name=utilities}
 fn language_extensions() -> HashMap<&'static str, &'static str> {
     let mut map = HashMap::new();
 
@@ -359,35 +469,9 @@ fn run_test_comparison(output_map: &HashMap<PathBuf, String>) -> bool {
         false
     }
 }
+```
 
-
-fn main() {
-    let args = Cli::parse();
-
-    // 1. Generate the complete output in memory
-    let output_map = generate_output_map(&args.files, args.dir.as_ref());
-
-    if args.test {
-        // 2a. Run the test logic
-        if !run_test_comparison(&output_map) {
-            // Exit with a non-zero code to indicate test failure
-            std::process::exit(1);
-        }
-
-    } else {
-        // 2b. Run the file writing logic
-        match write_output_to_disk(&output_map) {
-            Ok(_) => println!("✅ Successfully exported {} file(s).", output_map.len()),
-            Err(e) => {
-                eprintln!("🔥 Error writing files to disk: {}", e);
-                std::process::exit(1);
-            }
-        }
-
-    }
-}
-
-// Lots and lots of unit tests
+```rust {name=tests}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -574,3 +658,4 @@ mod tests {
         assert!(content.contains("let a = 0;"));
     }
 }
+```

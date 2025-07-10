@@ -2,6 +2,8 @@
 
 A fast, zero-config, programmer-first literate programming tool. illiterate exports source code from Markdown files, allowing you to keep your code and documentation in one place, perfectly in sync. It's written in Rust, distributed as a single static binary, and designed to be simple, powerful, and language-agnostic.
 
+`illiterate` is bootstrapped. The best way to understand how to use it, is to read the [annotated source code](illiterate.md) to learn how it works.
+
 ## Philosophy
 
 * **Markdown as the Source of Truth:** Your documentation isn't just *about* the code; it *is* the code.
@@ -63,7 +65,7 @@ fn main() {
 
 `illiterate` works by parsing special attributes inside your fenced code blocks.
 
-#### 1. Export Blocks ({export=...})
+### 1. Export Blocks ({export=...})
 
 A code block marked with `{export=path/to/file.ext}` will have its contents extracted and appended to the specified file. All blocks targeting the same file are concatenated in the order they appear.
 
@@ -71,7 +73,7 @@ A code block marked with `{export=path/to/file.ext}` will have its contents extr
     import utils
     ```
 
-#### 2. Named Fragments & Includes ({name=...} and <<...>>)
+### 2. Named Fragments & Includes ({name=...} and <<...>>)
 
 A code block can be given a name with `{name=my_fragment}`. This block is not exported directly but can be included elsewhere using the `<<my_fragment>>` syntax. This allows you to explain code in logical chunks, out of order, and assemble it correctly later.
 
@@ -86,7 +88,7 @@ A code block can be given a name with `{name=my_fragment}`. This block is not ex
     }
     ```
 
-#### 3. "Magic" Headless Exporting ({export})
+### 3. "Magic" Headless Exporting ({export})
 
 For simple cases where one Markdown file corresponds to one source file, you can use a headless `{export}` attribute. illiterate will automatically generate the filename based on the Markdown file's name and the code block's language.
 
@@ -126,14 +128,14 @@ illiterate [OPTIONS] [FILES...]
 
 Here are some of the planned features to make illiterate even more powerful. You are welcome to contribute to any of them!
 
-#### Dry Mode
+### Dry Mode
 
 A dry run mode that shows what files would be created and their contents without actually writing them to disk.
 
 * **Command:** `illiterate --dry [FILES...]`
 * **Functionality:** Outputs the list of files that would be created and their contents.
 
-#### Architecture Visualization (--graph)
+### Architecture Visualization (--graph)
 
 A picture is worth a thousand lines of code. This feature will generate a visual map of your project's structure.
 
@@ -141,14 +143,14 @@ A picture is worth a thousand lines of code. This feature will generate a visual
 * **Functionality:** Outputs a [Graphviz](https://graphviz.org/) dot language representation of the project. It will map the relationships between all {export=...} targets and the {name=...} fragments they include.
 * **Example:** `illiterate --graph my_app.md | dot -Tpng > architecture.png`
 
-#### Source Code Syncing (--update)
+### Source Code Syncing (--update)
 
 This provides a "reverse export" to keep the Markdown source of truth synchronized with small, quick changes made directly to the generated code.
 
 * **Command:** `illiterate -u, --update [FILES...]`
 * **Functionality:** illiterate will read the content of the on-disk source files. If a file differs from what *would have been* generated, this command will **update the corresponding code block in the Markdown file** to match the on-disk version. This is perfect for backporting quick fixes without manual copy-pasting.
 
-#### Code Editor Integration (LSP)
+### Code Editor Integration (LSP)
 
 To provide a seamless, real-time development experience, illiterate will function as a Language Server Protocol (LSP) server.
 
@@ -185,14 +187,16 @@ This creates a binary at `target/debug/illiterate`.
 4. **Re-export the source code:** Use the binary you just built to update the `src/` directory with your changes.
 
 ```bash
-./target/debug/illiterate illiterate.md
+make self
 ```
 
-5. **Re-build your changes:**
+5. **Run your tests:**
 
 ```bash
-cargo build
+make test
 ```
+
+6. **Rinse and repeat** until done. Then push and send a PR.
 
 ## License
 
