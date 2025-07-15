@@ -2,7 +2,7 @@
 
 A fast, zero-config, programmer-first literate programming tool. illiterate exports source code from Markdown files, allowing you to keep your code and documentation in one place, perfectly in sync. It's written in Rust, distributed as a single static binary, and designed to be simple, powerful, and language-agnostic.
 
-`illiterate` is bootstrapped. The best way to understand how to use it, is to read the [annotated source code](illiterate.md) to learn how it works.
+`illiterate` is bootstrapped. The best way to understand how to use it, is to read the [annotated source code](docs/illiterate.md) to learn how it works.
 
 ## Philosophy
 

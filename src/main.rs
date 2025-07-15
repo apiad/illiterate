@@ -71,6 +71,71 @@ fn generate_output_map(
 
     return source_map;
 }
+#[derive(Debug, PartialEq)]
+struct Chunk {
+    info: ChunkInfo,
+    content: String,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+struct ChunkInfo {
+    lang: String,
+    path: Option<String>,
+    name: Option<String>,
+    export: bool,
+}
+fn extract_chunks(file_path: &str) -> Vec<Chunk> {
+    let mut chunks = Vec::new();
+    let content = std::fs::read_to_string(file_path).unwrap();
+    let parser = MarkdownParser::new(&content);
+    let mut in_chunk = false;
+
+    // list of common language extensions (e.g., .py, .rs, .cpp)
+    let lang_ext = language_extensions();
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::CodeBlock(kind)) => {
+                if let CodeBlockKind::Fenced(info_str) = kind {
+                    if let Some(info) = parse_info_string(&info_str) {
+                        let mut chunk = Chunk {
+                            info,
+                            content: String::new(),
+                        };
+                
+                        // For empty export directives, we generate a default path
+                        if chunk.info.export && chunk.info.path.is_none() {
+                            let file_stem = Path::new(file_path).file_stem().unwrap().to_str().unwrap();
+                            let extension = lang_ext.get(chunk.info.lang.as_str()).unwrap_or(&"txt");
+                            let default_path = format!("{}.{}", file_stem, extension);
+                            chunk.info.path = Some(default_path);
+                
+                        }
+                
+                        chunks.push(chunk);
+                        in_chunk = true;
+                    }
+                }
+
+            }
+            Event::Text(text) => {
+                // If we're inside a code chunk, just take every text
+                // and append it to the last chunk (the one we're inside of)
+                if in_chunk {
+                    if let Some(last_chunk) = chunks.last_mut() {
+                        last_chunk.content.push_str(&text);
+                    }
+                }
+            }
+            Event::End(_) => {
+                in_chunk = false;
+            }
+            _ => {} // Nothing else matters
+        }
+    }
+
+    return chunks;
+}
 fn language_extensions() -> HashMap<&'static str, &'static str> {
     let mut map = HashMap::new();
 
@@ -107,21 +172,10 @@ fn language_extensions() -> HashMap<&'static str, &'static str> {
 
     return map;
 }
-
-#[derive(Debug, PartialEq, Clone)]
-struct ChunkInfo {
-    lang: String,
-    path: Option<String>,
-    name: Option<String>,
-    export: bool,
-}
-
 fn parse_info_string(info_string: &str) -> Option<ChunkInfo> {
     // First, capture the language and the rest of the attributes string.
     let lang_re = Regex::new(r"^\s*(?P<lang>\w+)\s*(?P<attrs>.*)$").unwrap();
-
     let caps = lang_re.captures(info_string)?;
-
     let lang = caps.name("lang").unwrap().as_str().to_string();
     let attrs_str = caps.name("attrs").unwrap().as_str();
 
@@ -154,6 +208,7 @@ fn parse_info_string(info_string: &str) -> Option<ChunkInfo> {
             }
             _ => {} // Ignore unknown attributes
         }
+
     }
 
     if path.is_none() && name.is_none() && !export {
@@ -167,13 +222,16 @@ fn parse_info_string(info_string: &str) -> Option<ChunkInfo> {
         export: export,
     });
 }
+fn create_named_chunk_map(chunks: &[Chunk]) -> HashMap<String, Vec<&Chunk>> {
+    let mut chunk_map: HashMap<String, Vec<&Chunk>> = HashMap::new();
 
-#[derive(Debug, PartialEq)]
-struct Chunk {
-    info: ChunkInfo,
-    content: String,
+    for chunk in chunks.iter() {
+        if let Some(name) = &chunk.info.name {
+            chunk_map.entry(name.clone()).or_default().push(chunk);
+        }
+    }
+    chunk_map
 }
-
 impl Chunk {
     /// Public method to start the expansion process.
     /// It initializes the tracking stack for circular dependency checks.
@@ -199,117 +257,58 @@ impl Chunk {
             }
             expansion_stack.push(name.clone());
         }
-
+    
+    
+        // This will hold the final expanded chunk
         let mut final_content = String::new();
+        // This regex matches lines with a named reference in the form <<...>>
         let include_re = Regex::new(r"^(?P<indent>\s*)<<(?P<name>[\w_.-]+)>>\s*$").unwrap();
-
+    
         for line in self.content.lines() {
             if let Some(caps) = include_re.captures(line) {
+                // This line contains a named reference.
                 let indent_str = caps.name("indent").unwrap().as_str();
                 let name_to_include = caps.name("name").unwrap().as_str();
-
+    
                 match named_chunks.get(name_to_include) {
                     Some(chunks_to_include) => {
                         for chunk in chunks_to_include {
                             // Recursively expand the included chunk.
-                            let expanded_include =
-                            chunk.expand_recursive(named_chunks, expansion_stack);
+                            let expanded_include = chunk.expand_recursive(named_chunks, expansion_stack);
                             // Add the captured indentation to each line of the expanded content.
                             for expanded_line in expanded_include.lines() {
                                 final_content.push_str(indent_str);
                                 final_content.push_str(expanded_line);
                                 final_content.push('\n');
                             }
+                            final_content.push('\n');
                         }
                     }
                     None => {
-                        // Handle missing chunk reference by inserting an error message.
-                        final_content.push_str(indent_str);
-                        final_content
-                            .push_str(&format!("// ERROR: Chunk '{}' not found", name_to_include));
+                        // Handle missing chunk reference
+                        panic!("ERROR: Chunk '{}' not found", name_to_include);
                     }
                 }
+    
             } else {
-                // This line doesn't contain an include, so add it as is.
+                // This line doesn't, so add it as is.
                 final_content.push_str(line);
+                final_content.push('\n');
             }
-            final_content.push('\n');
         }
-
-        // Pop this chunk's name from the stack after we're done processing it.
+    
+        // Some post-process we will need to make circular checks work
         if let Some(name) = &self.info.name {
             if expansion_stack.last() == Some(name) {
                 expansion_stack.pop();
             }
         }
-
-        // Remove the trailing newline that the loop adds.
-        if final_content.ends_with('\n') {
-            final_content.pop();
-        }
-
-        final_content
-    }
-}
-
-fn extract_chunks(file_path: &str) -> Vec<Chunk> {
-    let mut chunks = Vec::new();
-    let content = std::fs::read_to_string(file_path).unwrap();
-    let parser = MarkdownParser::new(&content);
-    let mut in_chunk = false;
-
-    let lang_ext = language_extensions();
-
-    for event in parser {
-        match event {
-            Event::Start(Tag::CodeBlock(kind)) => {
-                if let CodeBlockKind::Fenced(info_str) = kind {
-                    if let Some(info) = parse_info_string(&info_str) {
-                        let mut chunk = Chunk {
-                            info,
-                            content: String::new(),
-                        };
-
-                        if chunk.info.export && chunk.info.path.is_none() {
-                            let file_stem = Path::new(file_path).file_stem().unwrap().to_str().unwrap();
-                            let extension = lang_ext.get(chunk.info.lang.as_str()).unwrap_or(&"txt");
-                            let default_path = format!("{}.{}", file_stem, extension);
-                            chunk.info.path = Some(default_path);
-                        }
-
-                        chunks.push(chunk);
-                        in_chunk = true;
-                    }
-                }
-            }
-            Event::Text(text) => {
-                if in_chunk {
-                    if let Some(last_chunk) = chunks.last_mut() {
-                        last_chunk.content.push_str(&text);
-                    }
-                }
-            }
-            Event::End(_) => {
-                in_chunk = false;
-            }
-            _ => {}
-        }
+    
+    
+        return final_content;
     }
 
-    return chunks;
 }
-
-fn create_named_chunk_map(chunks: &[Chunk]) -> HashMap<String, Vec<&Chunk>> {
-    let mut chunk_map: HashMap<String, Vec<&Chunk>> = HashMap::new();
-
-    for chunk in chunks.iter() {
-        if let Some(name) = &chunk.info.name {
-            chunk_map.entry(name.clone()).or_default().push(chunk);
-        }
-    }
-    chunk_map
-}
-
 /// Writes the in-memory file map to the disk, overwriting existing files.
 fn write_output_to_disk(output_map: &HashMap<PathBuf, String>) -> io::Result<()> {
     for (path, content) in output_map {
@@ -320,7 +319,6 @@ fn write_output_to_disk(output_map: &HashMap<PathBuf, String>) -> io::Result<()>
     }
     Ok(())
 }
-
 /// Compares the in-memory file map with files on disk and reports differences.
 fn run_test_comparison(output_map: &HashMap<PathBuf, String>) -> bool {
     let mut differences = Vec::new();
@@ -394,7 +392,6 @@ mod tests {
 
     #[test]
     fn test_extract_simple_chunk() {
-        // open tests/simple.md
         let chunks = extract_chunks("tests/simple.md");
 
         assert!(chunks.len() == 1);
@@ -406,7 +403,6 @@ mod tests {
 
     #[test]
     fn test_extract_two_chunks() {
-        // open tests/two_chunks.md
         let chunks = extract_chunks("tests/two_chunks.md");
 
         assert!(chunks.len() == 2);
@@ -560,7 +556,7 @@ mod tests {
         let main_chunk = chunks.iter().find(|c| c.info.export).unwrap();
         let expanded = main_chunk.expand(&chunk_map);
 
-        assert_eq!(expanded, "fn main() {\n    println!(\"Hello World\");\n}");
+        assert_eq!(expanded, "fn main() {\n    println!(\"Hello World\");\n\n}\n");
     }
 
     #[test]
