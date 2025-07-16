@@ -124,44 +124,35 @@ illiterate [OPTIONS] [FILES...]
 
 - Basic markdown parsing and extraction of simple blocks.
 
-## Roadmap
+## Why not...?
 
-Here are some of the planned features to make illiterate even more powerful. You are welcome to contribute to any of them!
+There are many features you could conceivably expect from a literate programming tool that I purposefully avoided in favor of simplicity. Some of them are listed below with possible alternatives.
 
-### Dry Mode
+Most of these are achievable with a proper build system, e.g., using `makefile` or any other build utility.
 
-A dry run mode that shows what files would be created and their contents without actually writing them to disk.
+- **Conditional inclusions**: If you want to include some code chunks based on some condition (like, optional features), you can always achieve it by separating them into different source (markdown) files, and then conditionally including them in your call to `illiterate`.
+- **Replacing instead of appending**: If you want that some named chunks are treated as a replacement instead of an addition to the same named chunk, you can instead refactor your source such that source A or source B implements one version and source B another, and then use conditional compilation (see above) to decide which to include.
+- **Backpatching literate sources**: In literate programming, it can be tempting to make small fixes in the tangled code that you would later want to incorporate in the literate source. However, this creates more headaches than it solves, including keeping track of where each piece of tangled code came from. Combining recursive expansion and implicit indentation of code chunks, with the language-agnostic nature of `illiterate`, it is almost impossible to do this robustly because we would need to know how to annotate (e.g., how to put comments) in any possible language to achieve this. Instead, I encourage you to fully embrace literate programming and treat tangled source the same way you treat compiled bytecode.
 
-* **Command:** `illiterate --dry [FILES...]`
-* **Functionality:** Outputs the list of files that would be created and their contents.
+## Contribution
 
-### Architecture Visualization (--graph)
+At the moment, I consider `illiterate` feature-full and don't plan on adding anything other than to improve performance or refine some corner cases I might have missed.
 
-A picture is worth a thousand lines of code. This feature will generate a visual map of your project's structure.
+That being said, there are some features that I do believe would make the whole experience of working with literate sources much better, and I would happily accept PRs in this direction, including but not limited to:
 
-* **Command:** `illiterate --graph [FILES...]`
-* **Functionality:** Outputs a [Graphviz](https://graphviz.org/) dot language representation of the project. It will map the relationships between all {export=...} targets and the {name=...} fragments they include.
-* **Example:** `illiterate --graph my_app.md | dot -Tpng > architecture.png`
+- **Linting literate sources**: If you have a language with type checking or any other static checks, it would be awesome to be able to see those linting errors in the literate source. However, this is extremely hard to achieve with `illiterate` for the same reasoning we don't want backpatching (see above), and literate programming coupled with robust testing already pretty much solves the need for very complicated static analysis.  However, I do think it's doable by creating intermediate mapping files that explain which line of tangled source comes from which line of literate source, though I'm unconvinced whether the added complexity justifies the feature.
+- **Support for editor X**: In the same veing, if you want to add editor support for literate sources (e.g., cross-referencing and navigation between named chunks), I'm happy to accept PRs that include editor-specific config files or even short editor extensions. These would not become part of the `illiterate` program itself, but rather would be additional tools we could add or link to in the main `illiterate` repository.
 
-### Source Code Syncing (--update)
+I will also happily accept PRs that improve `illiterate` in the following ways:
 
-This provides a "reverse export" to keep the Markdown source of truth synchronized with small, quick changes made directly to the generated code.
+- Improving performance.
+- Improving the literate source explanations.
+- Fixes and/or tests for existing bugs and corner cases.
+- Github workflows to compile for other platforms.
 
-* **Command:** `illiterate -u, --update [FILES...]`
-* **Functionality:** illiterate will read the content of the on-disk source files. If a file differs from what *would have been* generated, this command will **update the corresponding code block in the Markdown file** to match the on-disk version. This is perfect for backporting quick fixes without manual copy-pasting.
+If you want to fork `illiterate` and modify it for your own use cases, you're absolutely welcome to. `illiterate` is fully open source and will forever be free as in free beer and free speech.
 
-### Code Editor Integration (LSP)
-
-To provide a seamless, real-time development experience, illiterate will function as a Language Server Protocol (LSP) server.
-
-* **Command:** `illiterate --lsp`
-* **Functionality:** This command launches the LSP server. When used with a compatible editor plugin, it enables:
-  * **Error Diagnostics:** Underlines includes of non-existent fragments.
-  * **Go to Definition:** F12 on `<<my_fragment>>` jumps to its definition.
-  * **Completions:** Autocompletes fragment names as you type <<....
-  * **Hover Information:** Shows a fragment's content when you hover over it.
-
-## Contributing & Building from Source
+### Building from Source
 
 This project is self-hosting! The source code for illiterate lives in illiterate.md and is exported to the src/ directory, which is checked into version control.
 
@@ -184,19 +175,13 @@ This creates a binary at `target/debug/illiterate`.
 
 3. **Make your changes:** Edit the "source of truth" file, `illiterate.md`.
 
-4. **Re-export the source code:** Use the binary you just built to update the `src/` directory with your changes.
+4. **Re-export the source code:** Use the binary you just built to update the `src/` directory with your changes. This will run tests as well.
 
 ```bash
 make self
 ```
 
-5. **Run your tests:**
-
-```bash
-make test
-```
-
-6. **Rinse and repeat** until done. Then push and send a PR.
+5. **Rinse and repeat** until done. Then push and send a PR.
 
 ## License
 

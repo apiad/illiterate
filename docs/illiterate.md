@@ -545,23 +545,7 @@ fn run_test_comparison(output_map: &HashMap<PathBuf, String>) -> bool {
     let mut differences = Vec::new();
 
     for (path, generated_content) in output_map {
-        match fs::read_to_string(path) {
-            Ok(disk_content) => {
-                if &disk_content != generated_content {
-                    differences.push(format!("Content mismatch in {}", path.display()));
-                }
-            }
-            Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                differences.push(format!("Missing expected file on disk: {}", path.display()));
-            }
-            Err(e) => {
-                differences.push(format!(
-                    "Could not read file {}: {}",
-                    path.display(),
-                    e
-                ));
-            }
-        }
+        <<check_generated_content>>
     }
 
     // Also check for any files on disk that shouldn't be there (optional but good practice)
@@ -569,18 +553,36 @@ fn run_test_comparison(output_map: &HashMap<PathBuf, String>) -> bool {
 
     if differences.is_empty() {
         println!("✅ All {} generated files are in sync with the disk.", output_map.len());
-        true
+        return true;
     } else {
         println!("❌ Found {} differences:", differences.len());
         for diff in differences {
             println!("  - {}", diff);
         }
-        false
+        return false;
     }
 }
 ```
 
-Finally, here are some missing packages we've been assuming were imported.
+The core of this method is of course checking the generated content against the on-disk source. THere three posibilities: the file is missing, the file is present but the content is different, or the file is present and the content is the same. We need to handle all three cases.
+
+```rust {name=check_generated_content}
+match fs::read_to_string(path) {
+    Ok(disk_content) => {
+        if &disk_content != generated_content {
+            differences.push(format!("Content mismatch in {}", path.display()));
+        }
+    }
+    Err(e) if e.kind() == io::ErrorKind::NotFound => {
+        differences.push(format!("Missing expected file on disk: {}", path.display()));
+    }
+    Err(e) => {
+        differences.push(format!("Could not read file {}: {}", path.display(), e));
+    }
+}
+```
+
+And finally, here are some missing packages we've been assuming were imported.
 
 
 ```rust {name=packages}
@@ -592,3 +594,5 @@ use std::{
     path::{Path, PathBuf},
 };
 ```
+
+And that's it. The whole of `illiterate` in close to 600 lines of literate programming. Enjoy!

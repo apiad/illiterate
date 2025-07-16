@@ -334,13 +334,10 @@ fn run_test_comparison(output_map: &HashMap<PathBuf, String>) -> bool {
                 differences.push(format!("Missing expected file on disk: {}", path.display()));
             }
             Err(e) => {
-                differences.push(format!(
-                    "Could not read file {}: {}",
-                    path.display(),
-                    e
-                ));
+                differences.push(format!("Could not read file {}: {}", path.display(), e));
             }
         }
+
     }
 
     // Also check for any files on disk that shouldn't be there (optional but good practice)
@@ -348,13 +345,13 @@ fn run_test_comparison(output_map: &HashMap<PathBuf, String>) -> bool {
 
     if differences.is_empty() {
         println!("✅ All {} generated files are in sync with the disk.", output_map.len());
-        true
+        return true;
     } else {
         println!("❌ Found {} differences:", differences.len());
         for diff in differences {
             println!("  - {}", diff);
         }
-        false
+        return false;
     }
 }
 
