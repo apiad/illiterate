@@ -112,6 +112,10 @@ illiterate [OPTIONS] [FILES...]
 
 ## Changelog
 
+### v0.3.1
+
+- Minor improvements and bug fixes.
+
 ### v0.3.0
 
 - Add flag `--test` to test the output against generated files.
