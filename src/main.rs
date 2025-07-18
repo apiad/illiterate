@@ -390,31 +390,31 @@ mod tests {
     #[test]
     fn test_extract_simple_chunk() {
         let chunks = extract_chunks("tests/simple.md");
-
+    
         assert!(chunks.len() == 1);
-
+    
         let chunk0 = &chunks[0];
         assert!(chunk0.info.lang == "rust");
         assert_eq!(chunk0.info.path, Some("simple.rs".to_string()));
     }
-
+    
     #[test]
     fn test_extract_two_chunks() {
         let chunks = extract_chunks("tests/two_chunks.md");
-
+    
         assert!(chunks.len() == 2);
-
+    
         let chunk0 = &chunks[0];
         assert!(chunk0.info.lang == "python");
         assert!(chunk0.content == "print(\"Hello World\")\n");
         assert_eq!(chunk0.info.name, Some("hello_world".to_string()));
-
+    
         let chunk1 = &chunks[1];
         assert!(chunk1.info.lang == "rust");
         assert!(chunk1.content == "fn main() {\n    // A first chunk\n}\n");
         assert_eq!(chunk1.info.path, Some("main.rs".to_string()));
     }
-
+    
     #[test]
     fn some_yes_some_no() {
         let chunks = extract_chunks("tests/some_yes_some_no.md");
@@ -432,7 +432,7 @@ mod tests {
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
-
+    
     #[test]
     fn test_language_and_name() {
         let info = "python {name=hello_world}";
@@ -444,7 +444,7 @@ mod tests {
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
-
+    
     #[test]
     fn test_attributes_in_different_order() {
         let info = "rust {name=chunk_1} {export=src/main.rs}";
@@ -456,13 +456,13 @@ mod tests {
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
-
+    
     #[test]
     fn test_language_only() {
         let info = "python";
         assert_eq!(parse_info_string(info), None);
     }
-
+    
     #[test]
     fn test_with_export_only() {
         let info = "javascript {export=app.js}";
@@ -474,7 +474,7 @@ mod tests {
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
-
+    
     #[test]
     fn test_with_headless_export_only() {
         let info = "rust {export}";
@@ -486,7 +486,7 @@ mod tests {
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
-
+    
     #[test]
     fn test_headless_export_with_name() {
         let info = "rust {name=my_frag} {export}";
@@ -498,7 +498,7 @@ mod tests {
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
-
+    
     #[test]
     fn test_with_name_only() {
         let info = "rust {name=my_fragment}";
@@ -510,7 +510,7 @@ mod tests {
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
-
+    
     #[test]
     fn test_with_extra_whitespace() {
         let info = "  bash   {export=run.sh}  ";
@@ -522,48 +522,19 @@ mod tests {
         };
         assert_eq!(parse_info_string(info), Some(expected));
     }
-
+    
     #[test]
     fn test_no_match_for_invalid_format() {
         let info = "{invalid_format}";
         assert_eq!(parse_info_string(info), None);
     }
-
+    
     #[test]
     fn test_empty_string() {
         let info = "";
         assert_eq!(parse_info_string(info), None);
     }
 
-    #[test]
-    fn test_build_chunk_map() {
-        let chunks = extract_chunks("tests/references.md");
-        let chunk_map = create_named_chunk_map(&chunks);
-
-        assert!(chunk_map.len() == 1);
-        assert!(chunk_map.contains_key("main_content"));
-    }
-
-    #[test]
-    fn expand_simple_chunk() {
-        let chunks = extract_chunks("tests/references.md");
-        let chunk_map = create_named_chunk_map(&chunks);
-
-        // The exportable chunk is the first one
-        let main_chunk = chunks.iter().find(|c| c.info.export).unwrap();
-        let expanded = main_chunk.expand(&chunk_map);
-
-        assert_eq!(expanded, "fn main() {\n    println!(\"Hello World\");\n\n}\n");
-    }
-
-    #[test]
-    fn test_expand_complex() {
-        let chunks = extract_chunks("tests/complex_references.md");
-        let chunk_map = create_named_chunk_map(&chunks);
-
-        let main_chunk = chunks.iter().find(|c| c.info.name == Some("helper".to_string())).unwrap();
-        let content = main_chunk.expand(&chunk_map);
-
-        assert!(content.contains("let a = 0;"));
-    }
+    // ERROR: Chunk 'tests_build_chunk_map' not found
+    // ERROR: Chunk 'tests_expand_chunk' not found
 }
